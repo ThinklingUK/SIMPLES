@@ -12,6 +12,7 @@ import android.view.View;
 import java.util.Random;
 
 /**
+ * SIMPLES
  * Created by Ellison on 11/04/2015.
  */
 public class DrawView extends View {

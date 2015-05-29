@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.support.annotation.NonNull;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -12,6 +13,7 @@ import android.view.View;
 import java.util.Random;
 
 /**
+ * SIMPLES
  * Created by Ellison on 11/04/2015.
  */
 public class DrawView2 extends View {
@@ -20,8 +22,8 @@ public class DrawView2 extends View {
     /*VARIABLES*/
 
     Random rnd = new Random();
-    Ball youBall = new Ball();
-    Ball[] ball = new Ball[50];
+    MoveObj player1 = new MoveObj();
+    MoveObj[] objs = new MoveObj[50];
     int screenW;
     int screenH;
 
@@ -52,26 +54,24 @@ public class DrawView2 extends View {
         paint4.setColor(Color.parseColor("#000000"));
         paint4.setStyle(Paint.Style.STROKE);
 
-        youBall.x = 80;
-        youBall.y = 80;
-        youBall.xSpeed = 0;
-        youBall.ySpeed = 0;
-        youBall.radius = 40;
-        youBall.mass = 4 / 3 * 3.142 * 40 * 40 * 40;
+        player1.x = 80;
+        player1.y = 80;
+        player1.xSpeed = 0;
+        player1.ySpeed = 0;
+        player1.radius = 40;
+        player1.mass = 4 / 3 * 3.142 * 40 * 40 * 40;
+        player1.type = 100;
 
 
-        // initialise the ball array by creating a new Ball object for each entry in the array
-        for (int bCount = 0; bCount < ball.length; bCount++) ball[bCount] = new Ball();
-        // above can also be written in this form
-        // for(Ball b : ball) b = new Ball();
-
+        // initialise the objs array by creating a new MoveObj object for each entry in the array
+        for (int bCount = 0; bCount < objs.length; bCount++) objs[bCount] = new MoveObj();
 
     }
 
     /* BIT FOR TOUCHING! */
 
     @Override
-    public boolean onTouchEvent(MotionEvent e) {
+    public boolean onTouchEvent(@NonNull MotionEvent e) {
 
 
         // MotionEvent reports input details from the touch screen
@@ -82,8 +82,8 @@ public class DrawView2 extends View {
             case MotionEvent.ACTION_DOWN:
                 if (score>0){
                 score--;
-                youBall.xSpeed = (int) (e.getX() - youBall.x) / 10;
-                youBall.ySpeed = (int) (e.getY() - youBall.y) / 10;
+                player1.xSpeed = (int) (e.getX() - player1.x) / 10;
+                player1.ySpeed = (int) (e.getY() - player1.y) / 10;
                 }
         }
 
@@ -121,61 +121,38 @@ public class DrawView2 extends View {
         parent.ScoreText.setText("Score: "+ score);
         parent.TimeLeftText.setText("Seconds: "+Math.round(timeSoFar/25));
 
-        // count for each entry in the ball array and then check for collision against all of the subsequent ones.
-        // Once the collisions have been handled, move each ball, then draw it.
+        // count for each entry in the objs array and then check for collision against all of the subsequent ones.
+
+        for (int bCount1 = 0; bCount1 < objs.length; bCount1++) {
+            for (int bCount2 = bCount1 + 1; bCount2 < objs.length; bCount2++) {
+                collision(objs[bCount1], objs[bCount2]);
+            }
+        }
+
+        // Once the collisions have been handled, move each objs, then draw it.
         // remember that the .move()  function has been programmed to detect wall collisions
-        for (int bCount1 = 0; bCount1 < ball.length; bCount1++) {
-            for (int bCount2 = bCount1 + 1; bCount2 < ball.length; bCount2++) {
-                ballCollision(ball[bCount1], ball[bCount2]);
-            }
-
-            ball[bCount1].move();
-            canvas.drawCircle(ball[bCount1].x, ball[bCount1].y, ball[bCount1].radius, ball[bCount1].paint);
-            if(ball[bCount1].type == 0) {
-
-                canvas.drawCircle(ball[bCount1].x, ball[bCount1].y, ball[bCount1].radius,paint4);
-
-
-            }
+        for (MoveObj obj : objs) {
+            obj.move();
+            obj.draw(canvas);
         }
 
 
-        // Check Hero Ball For Collisions
-        for (int bCount = 0; bCount < ball.length; bCount++) {
+        // Check Hero MoveObj For Collisions - TODO could avoid this duplicated code if we add hero to array.
+        for (MoveObj obj : objs) if (collision(player1, obj) && (obj.type == 0)) score++;
 
-          if( ballCollision(youBall, ball[bCount])) {
-
-
-
-              if(ball[bCount].type == 0) {
-
-                  score++;
-              }
-
-
-          }
-
-
-
-
-        }
-        //Makes ball bounce on edges
-        youBall.move();
-
-        //draw the bird
-        canvas.drawCircle(youBall.x, youBall.y, youBall.radius, paint1);
-        canvas.drawCircle(youBall.x + youBall.radius / 3, youBall.y - youBall.radius / 3, youBall.radius / 4, paint3);
-        canvas.drawCircle(youBall.x - youBall.radius / 3, youBall.y - youBall.radius / 3, youBall.radius / 4, paint3);
+        //move the player and then draw
+        player1.move();
+        player1.draw(canvas);
 
 
 
     }
 
 
-    /* Makes Ball Class */
+    /* Makes MoveObj Class */
 
     // Gives Variable Name And Type
-    public class Ball {
+    public class MoveObj {
 
         int type;
 
@@ -185,15 +162,18 @@ public class DrawView2 extends View {
         int ySpeed;
         int radius;
         double mass;
+        int angle; // rotational angle of the object
+        int attack; // power used in collisions
+        int defense; // defence used in collisions
         Paint paint = new Paint();
 
         // This is the default constructor - it sets the data for the variables to random values
-        public Ball() {
+        public MoveObj() {
 
             type = rnd.nextInt(10); // get a random integer from 0 to 9 for the 'type'
 
             if (type == 0) {
-                paint.setARGB(255, 255, 255, 255);
+                paint=paint4;
                 radius = 30;
             } else {
                 paint.setARGB(255, rnd.nextInt(256), rnd.nextInt(256), rnd.nextInt(256));
@@ -210,28 +190,47 @@ public class DrawView2 extends View {
         public void move() {
 
             if(type == 0 && rnd.nextInt(250)>248){
-
                 xSpeed = rnd.nextInt(100) - 50;
                 ySpeed = rnd.nextInt(100) - 50;
-                Log.d("random fire", "on ball");
+                Log.d("random fire", "on object");
             }
 
-            //Makes ball bounce on edges
+            // Makes object bounce on edges
             if (x + xSpeed < radius || x + xSpeed + radius > screenW) {
                 xSpeed = -xSpeed;
             }
             if (y + ySpeed < radius || y + ySpeed + radius > screenH) {
                 ySpeed = -ySpeed;
             }
+
+            // move the object based on speed
             x += xSpeed;
             y += ySpeed;
 
         }
-        //
 
+        public void draw(Canvas canvas) {
+
+            switch (type){
+
+/*                case 0:
+                    canvas.drawCircle(x, y, radius, paint4);
+                    break;*/
+
+                case 100:
+                    canvas.drawCircle(player1.x, player1.y, player1.radius, paint1);
+                    canvas.drawCircle(player1.x + player1.radius / 3, player1.y - player1.radius / 3, player1.radius / 4, paint3);
+                    canvas.drawCircle(player1.x - player1.radius / 3, player1.y - player1.radius / 3, player1.radius / 4, paint3);
+                    break;
+
+                default:
+                    canvas.drawCircle(x, y, radius, paint);
+
+            }
+        }
     }
 
-    public boolean ballCollision(Ball a, Ball b) {
+    public boolean collision(MoveObj a, MoveObj b) {
 
         double mass_ratio, dvx2, norm, xSpeedDiff, ySpeedDiff, fy21, sign;
 
@@ -241,6 +240,7 @@ public class DrawView2 extends View {
 
 
         // if the balls are touching - ie. x-squared + y-squared is less that radius+radius-squared TODO - could do bounding-box check
+        // needs to be more complex for non-round shapes
         if ((xDist * xDist + yDist * yDist) < (radiusSum * radiusSum)) {
 
             mass_ratio = b.mass / a.mass;
