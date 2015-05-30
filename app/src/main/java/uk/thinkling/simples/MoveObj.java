@@ -14,13 +14,14 @@ import java.util.Random;
 // Gives Variable Name And Type
 public class MoveObj {
     int type;
-    int x;
-    int y;
-    int xSpeed;  // if these are int, then the speed will gradually slow down due to rounding.
-    int ySpeed;
+    float x;
+    float y;
+    float xSpeed;  // if these are int, then the speed will gradually slow down due to rounding.
+    float ySpeed;
+    float adjSpeed; // how much speed is conserved (0 is 100% friction), above 1 will accelerate
     int radius;
     double mass;
-    int angle; // rotational angle of the object
+    float angle; // rotational angle of the object
     int attack; // power used in collisions
     int defense; // defence used in collisions
     Paint paint = new Paint();
@@ -58,7 +59,8 @@ public class MoveObj {
         y = rnd.nextInt(screenH - radius * 2) + radius;
         xSpeed = rnd.nextInt(25) - 12;
         ySpeed = rnd.nextInt(25) - 12;
-        mass = 4 / 3 * 3.142 * radius * radius * radius;
+        adjSpeed = 0.99f;
+        mass = 4 / 3 * 3.142 * radius * radius;
     }
 
     // This is the default constructor - it sets the type to random values
@@ -75,7 +77,11 @@ public class MoveObj {
             Log.d("random fire", "on object");
         }
 
-        // Makes object bounce on edges
+        //slow down due to friction
+        xSpeed *= adjSpeed;
+        ySpeed *= adjSpeed;
+
+        // Makes object bounce on edges (if it was about to hit - this introduces errors at high speed.
         if (x + xSpeed < radius || x + xSpeed + radius > screenW) {
             xSpeed = -xSpeed;
         }
@@ -119,6 +125,7 @@ public class MoveObj {
 
 
         // if the balls are touching - ie. x-squared + y-squared is less that radius+radius-squared TODO - could do bounding-box check
+        // we currently detect an actual collision. TODO - Should determine if they will collide, and then adjust for that.
         // needs to be more complex for non-round shapes
         if ((xDist * xDist + yDist * yDist) < (radiusSum * radiusSum)) {
 

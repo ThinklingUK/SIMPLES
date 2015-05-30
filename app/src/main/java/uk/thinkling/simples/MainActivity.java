@@ -69,6 +69,7 @@ public class MainActivity extends ActionBarActivity {
         // Handle action bar item clicks here. The action bar will
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
+        parent.removeView(myDrawView);
 
         switch (item.getItemId()){
 
@@ -76,23 +77,26 @@ public class MainActivity extends ActionBarActivity {
                 return true;
 
             case R.id.action_start1:
-                // switch the drawView
-                parent.removeView(myDrawView);
                 myDrawView = new DrawView(this , null);
-                parent.addView(myDrawView, index);
-                return true;
+                break;
 
             case R.id.action_start2:
-                // switch the drawView
-                parent.removeView(myDrawView);
                 myDrawView = new DrawView2(this , null);
-                parent.addView(myDrawView, index);
-                return true;
+                break;
+
+            case R.id.action_start3:
+                myDrawView = new DrawView3(this , null);
+                break;
+
+            case R.id.action_start4:
+                myDrawView = new DrawView3(this , null);
+                break;
 
             default:
 
         }
 
+        parent.addView(myDrawView, index);
         return super.onOptionsItemSelected(item);
     }
 
