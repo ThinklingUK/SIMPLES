@@ -89,7 +89,7 @@ public class MainActivity extends ActionBarActivity {
                 break;
 
             case R.id.action_start4:
-                myDrawView = new DrawView3(this , null);
+                myDrawView = new DrawView4(this , null);
                 break;
 
             default:

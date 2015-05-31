@@ -8,6 +8,11 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+
 /**
  * SIMPLES
  * Created by Ellison on 11/04/2015.
@@ -18,7 +23,7 @@ public class DrawView2 extends View {
     /*VARIABLES*/
 
     MoveObj player1;
-    MoveObj[] objs = new MoveObj[50];
+    MoveObj[] objs = new MoveObj[21];
     int screenW;
     int screenH;
 
@@ -46,8 +51,8 @@ public class DrawView2 extends View {
         screenH = h;
         // initialise the objs array by creating a new MoveObj object for each entry in the array
         // TODO - maybe only do this if null
-        for (int bCount = 0; bCount < objs.length; bCount++) objs[bCount] = new MoveObj( w, h);
-        player1 = new MoveObj(100, w, h);
+        player1 = objs[0] = new MoveObj(100, w, h);
+        for (int bCount = 1; bCount < objs.length; bCount++) objs[bCount] = new MoveObj( w, h);
     }
 
     /* BIT FOR TOUCHING! */
@@ -89,27 +94,74 @@ public class DrawView2 extends View {
         parent.ScoreText.setText("Score: "+ score);
         parent.TimeLeftText.setText("Seconds: "+Math.round(timeSoFar/25));
 
-        // count for each entry in the objs array and then check for collision against all of the subsequent ones.
-        for (int bCount1 = 0; bCount1 < objs.length; bCount1++) {
-            for (int bCount2 = bCount1 + 1; bCount2 < objs.length; bCount2++) {
-                objs[bCount1].collision(objs[bCount2]);
+
+        double dt=1;
+        while (dt>=0) {
+            // First, move each object forward in time
+            for (MoveObj obj : objs) obj.move(screenW,screenH,dt);
+            dt=-1;
+
+            //find first collision and rewind to that point.
+            List<CollisionRec> collisions = new ArrayList<CollisionRec>();
+
+            // count for each entry in the objs array and then check for collision against all of the subsequent ones.
+            for (int bCount1 = 0; bCount1 < objs.length; bCount1++) {
+                for (int bCount2 = bCount1 + 1; bCount2 < objs.length; bCount2++) {
+                    double time = objs[bCount1].objCollisionTime(objs[bCount2]);
+                    if (time>1) { Log.d("error","time of "+time + " on "+objs[bCount1] + objs[bCount2]); time=0; }
+                    if (time >= 0) collisions.add(new CollisionRec(time,objs[bCount1],objs[bCount2]));
+                }
+            }
+
+            // check wall collisions also
+            for (MoveObj obj : objs) {
+                double time = obj.wallCollisionTime(screenW, screenH);
+                if (time>1) { time=0; Log.d("error","on "+obj);}
+                if (time >= 0) collisions.add(new CollisionRec(time,obj,null));
+
+            }
+
+            Collections.sort(collisions, new Comparator<CollisionRec>() {
+                public int compare(CollisionRec a, CollisionRec b) {
+                    return (a.time > b.time)?-1:1;
+                }
+            });
+
+            if (!collisions.isEmpty()) {
+
+                dt=collisions.get(0).time;
+
+                // First, rewind each object back to time of first collision.
+                Log.d("rewind to collision", "at: " + dt);
+                for (MoveObj obj : objs) obj.move(screenW,screenH,-dt);
+
+                // handle all the collisions starting at earliest time - if 2nd obj is null, then a wall collision
+                for (CollisionRec coll : collisions) {
+                    if (coll.time<dt) break;
+                    if (coll.objb == null) coll.obja.wallCollision(screenW, screenH);
+                    else coll.obja.objCollision(coll.objb);
+                }
             }
         }
 
-        // Once the collisions have been handled, move each object, then draw it.
-        // remember that the .move()  function has been programmed to detect wall collisions
-        for (MoveObj obj : objs) {
-            obj.move(screenW, screenH);
-            obj.draw(canvas);
+        // Once the collisions have been handled, draw each object.
+        for (MoveObj obj : objs) obj.draw(canvas);
+
+
+    }
+
+
+    public class CollisionRec {
+        double time;
+        MoveObj obja;
+        MoveObj objb;
+
+
+        public CollisionRec(double time, MoveObj obja, MoveObj objb) {
+            this.time = time;
+            this.obja = obja;
+            this.objb = objb;
         }
-
-        // Check Hero MoveObj For Collisions - TODO could avoid this duplicated code if we add hero to array.
-        for (MoveObj obj : objs) if (player1.collision(obj) && (obj.type == 0)) score++;
-
-        //move the player and then draw
-        player1.move(screenW, screenH);
-        player1.draw(canvas);
-
     }
 
 
