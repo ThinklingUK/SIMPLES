@@ -52,8 +52,7 @@ public class DrawView extends View {
         paint1.setColor(Color.parseColor("#000000"));
         paint2.setColor(Color.parseColor("#FFFF00"));
         paint3.setColor(Color.parseColor("#FFFFFF"));
-        paint4.setColor(Color.parseColor("#000000"));
-        paint4.setStyle(Paint.Style.STROKE);
+
 
         youBall.x = 80;
         youBall.y = 80;
@@ -140,12 +139,6 @@ public class DrawView extends View {
 
                 ball[bCount1].move();
                 canvas.drawCircle(ball[bCount1].x, ball[bCount1].y, ball[bCount1].radius, ball[bCount1].paint);
-                if (ball[bCount1].type == 0) {
-
-                    canvas.drawCircle(ball[bCount1].x, ball[bCount1].y, ball[bCount1].radius, paint4);
-
-
-                }
             }
 
 
@@ -204,7 +197,9 @@ public class DrawView extends View {
             type = rnd.nextInt(10); // get a random integer from 0 to 9 for the 'type'
 
             if (type == 0) {
-                paint.setARGB(255, 255, 255, 255);
+                paint.setColor(Color.parseColor("#FFFFFF"));
+                paint.setStyle(Paint.Style.STROKE);
+                paint.setStrokeWidth(5f);
                 radius = 30;
             } else {
                 paint.setARGB(255, rnd.nextInt(256), rnd.nextInt(256), rnd.nextInt(256));

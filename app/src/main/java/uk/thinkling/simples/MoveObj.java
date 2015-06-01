@@ -24,51 +24,58 @@ public class MoveObj {
     float angle; // rotational angle of the object
     int attack; // power used in collisions
     int defense; // defence used in collisions
-    Paint paint = new Paint();
+    Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    static Paint stroke = new Paint(Paint.ANTI_ALIAS_FLAG);
+
     static Random rnd = new Random();
-    // Use Color.parseColor to define HTML colors and set the color of the myPaint Paint object
-    static Paint eyepaint = new Paint();
 
-
-    // This is the type specific constructor - it sets the data for the variables to random values
-    public MoveObj(int type, int screenW, int screenH) {
-
-        //TODO should set radius multiple based on screen size
-
+    public MoveObj(int type, int radius, float x, float y, double xSpeed, double ySpeed) {
         this.type = type;
+        this.x = x;
+        this.y = y;
+        this.xSpeed = xSpeed;
+        this.ySpeed = ySpeed;
+        this.radius = radius;
+        this.mass= 4 / 3 * 3.142 * radius * radius;;
+
         switch (type) {
             case 0:
-                radius = 30;
-                paint.setColor(Color.parseColor("#000000"));
+                paint.setColor(Color.parseColor("#FFFFFF"));
                 paint.setStyle(Paint.Style.STROKE);
+                paint.setStrokeWidth(5f);
                 break;
 
             case 11:  //red ball
-                radius = 40;
-                paint.setColor(Color.parseColor("#FF0000"));
+                paint.setColor(Color.parseColor("#c0c0c0"));
                 break;
 
             case 12: //blue ball
-                radius = 40;
-                paint.setColor(Color.parseColor("#0000FF"));
+                paint.setColor(Color.parseColor("#c5b358"));
                 break;
 
             case 100: //hero ball
-                radius = 40;
                 paint.setColor(Color.parseColor("#000000"));
-                eyepaint.setColor(Color.parseColor("#FFFFFF"));
+                stroke.setColor(Color.parseColor("#FFFFFF"));
+                stroke.setStyle(Paint.Style.STROKE);
+                stroke.setStrokeWidth(2f);
                 break;
 
             default:
-                radius = rnd.nextInt(40) + 10;
-                paint.setARGB(255, rnd.nextInt(256), rnd.nextInt(256), rnd.nextInt(256));
+                paint.setARGB(255, rnd.nextInt(200)+55, rnd.nextInt(200)+55, rnd.nextInt(200)+55);
         }
 
-        x = rnd.nextInt(screenW - radius * 2) + radius;
-        y = rnd.nextInt(screenH - radius * 2) + radius;
-        xSpeed = rnd.nextInt(25) - 12;
-        ySpeed = rnd.nextInt(25) - 12;
-        mass = 4 / 3 * 3.142 * radius * radius;
+        paint.setAntiAlias(true);
+
+    }
+
+    // Based on radius, sets random position and speed
+    public MoveObj(int type, int radius, int screenW, int screenH) {
+        this(type, radius, rnd.nextInt(screenW - radius * 2) + radius, rnd.nextInt(screenH - radius * 2) + radius, rnd.nextInt(25) - 12, rnd.nextInt(25) - 12); // get a random integer from 0 to 9 for the 'type'
+    }
+
+    // This is the type specific constructor - it sets radius to random values
+    public MoveObj(int type, int screenW, int screenH) {
+        this(type, type==0?40:rnd.nextInt(40) + 10, screenW, screenH); // get a random integer from 0 to 9 for the 'type'
     }
 
     // This is the default constructor - it sets the type to random values
@@ -98,13 +105,13 @@ public class MoveObj {
 
             case 100:
                 canvas.drawCircle(x, y, radius, paint);
-                canvas.drawCircle(x + radius / 3, y - radius / 3, radius / 4, eyepaint);
-                canvas.drawCircle(x - radius / 3, y - radius / 3, radius / 4, eyepaint);
+                canvas.drawCircle(x, y, radius, stroke);
+                canvas.drawCircle(x + radius / 3, y - radius / 3, radius / 4, stroke);
+                canvas.drawCircle(x - radius / 3, y - radius / 3, radius / 4, stroke);
                 break;
 
             default:
                 canvas.drawCircle(x, y, radius, paint);
-
         }
     }
 
@@ -113,6 +120,9 @@ public class MoveObj {
         // slow the object based on factor
         xSpeed*=factor;
         ySpeed*=factor;
+        if (Math.abs(xSpeed)<0.01f) xSpeed=0;
+        if (Math.abs(ySpeed)<0.01f) ySpeed=0;
+
     }
 
     public void move(int screenW, int screenH, double time) {
@@ -126,32 +136,13 @@ public class MoveObj {
 
     }
 
-    public void move(int screenW, int screenH, float speedAdj) {
-
-        //slow down due to friction
-        xSpeed *= speedAdj;
-        ySpeed *= speedAdj;
-
-        // Makes object bounce on edges (if it was about to hit - this introduces errors at high speed.
-        if (x + xSpeed < radius || x + xSpeed + radius > screenW) {
-            xSpeed = -xSpeed;
-        }
-        if (y + ySpeed < radius || y + ySpeed + radius > screenH) {
-            ySpeed = -ySpeed;
-        }
-
-        // move the object based on speed
-        x += xSpeed;
-        y += ySpeed;
-
-    }
-
     public double wallCollisionTime(int screenW, int screenH) {
 
         //detect earliest wall collision, ie. biggest dt (from y or X strike)
         double dt=-1;
         if (x + xSpeed < radius) dt = Math.max(dt, (x - radius) / xSpeed);
         else if (x + xSpeed + radius > screenW) dt = Math.max(dt, (x + radius - screenW) / xSpeed);
+
         if (y + ySpeed < radius) dt = Math.max(dt, (y - radius) / ySpeed);
         else if (y + ySpeed + radius > screenH) dt = Math.max(dt, (y + radius - screenH) / ySpeed);
 
@@ -162,13 +153,8 @@ public class MoveObj {
     public void wallCollision(int screenW, int screenH) {
 
         // Makes object bounce on edges (if it was about to hit - this introduces errors at high speed.
-        if (x + xSpeed <= radius || x + xSpeed + radius >= screenW) {
-            xSpeed = -xSpeed;
-        }
-
-        if (y + ySpeed <= radius || y + ySpeed + radius >= screenH) {
-            ySpeed = -ySpeed;
-        }
+        if (x + xSpeed <= radius || x + xSpeed + radius >= screenW) xSpeed = -xSpeed;
+        if (y + ySpeed <= radius || y + ySpeed + radius >= screenH) ySpeed = -ySpeed;
     }
 
     public double objCollisionTime(MoveObj obj) {
@@ -320,36 +306,12 @@ public class MoveObj {
 
 
     /// Calculate the time of closest approach of two moving circles.  Also determine if the circles collide.
-    ///
-    /// Input:
-    /// Pa - Position of circle A.
-    /// Pb - Position of circle B.
-    /// Va - Velocity of circle A.
-    /// Vb - Velocity of circle B.
-    /// Ra - Radius of circle A.
-    /// Rb - Radius of circle B.
-    ///
+
     /// Returns:
-    /// collision - Returns True if a collision occured, else False.
-    /// The method returns the time to impact if collision=true, else it returns the time of closest approach.
-    ///
-    /// Notes:
-    /// This algorithm will work in any dimension.  Simply change the Vector2's to Vector3's to make this work
-    /// for spheres.  You can also set the radii to 0 to work with points/rays.
-    ///
+    /// collision - Returns Positive Time if a collision will occur, else negative (ie. has already occurred or no collision.
 
     public double TimeOfClosestApproach(MoveObj obj)
     {
-/*
-        Vector2 Pab = Pa - Pb;
-        Vector2 Vab = Va - Vb;
-        float a = Vector2.Dot(Vab, Vab);
-        float b = 2 * Vector2.Dot(Pab, Vab);
-        float c = Vector2.Dot(Pab, Pab) - (Ra + Rb) * (Ra + Rb);
-                //NB: 2D dot product = x1*x2 + y1*y2
-
-        */
-
         // vector Pab
         float dX = obj.x - this.x;
         float dY = obj.y - this.y;
@@ -370,29 +332,19 @@ public class MoveObj {
         // Case 1:
         // If the discriminant is negative, then there are no real roots, so there is no collision.  The time of
         // closest approach is then given by the average of the imaginary roots, which is:  t = -b / 2a
-        double t;
-        if (discriminant < 0)
-        {
-            return -1;
-        }
-        else
-        {
-            // Case 2 and 3:
-            // If the discriminant is zero, then there is exactly one real root, meaning that the circles just grazed each other.  If the
-            // discriminant is positive, then there are two real roots, meaning that the circles penetrate each other.  In that case, the
-            // smallest of the two roots is the initial time of impact.  We handle these two cases identically.
-            double t0 = (-b + Math.sqrt(discriminant)) / (2 * a);
-            double t1 = (-b - Math.sqrt(discriminant)) / (2 * a);
-            t = Math.min(t0, t1);
 
-            // We also have to check if the time to impact is negative.  If it is negative, then that means that the collision
-            // occurred in the past.  Since we're only concerned about future events, we say that no collision occurs if t < 0.
-        }
+        if (discriminant < 0) return -1;
 
-        // Finally, if the time is negative, then set it to zero, because, again, we want this function to respond only to future events.
+        // Case 2 and 3:
+        // If the discriminant is zero, then there is exactly one real root, meaning that the circles just grazed each other.  If the
+        // discriminant is positive, then there are two real roots, meaning that the circles penetrate each other.  In that case, the
+        // smallest of the two roots is the initial time of impact.  We handle these two cases identically.
+        double t0 = (-b + Math.sqrt(discriminant)) / (2 * a);
+        double t1 = (-b - Math.sqrt(discriminant)) / (2 * a);
 
-
-        return t;
+        // We also have to check if the time to impact is negative.  If it is negative, then that means that the collision
+        // occurred in the past.  Since we're only concerned about future events, we say that no collision occurs if t < 0.
+        return Math.min(t0, t1);
     }
 }
 

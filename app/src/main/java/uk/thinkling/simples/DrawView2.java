@@ -23,14 +23,18 @@ public class DrawView2 extends View {
     /*VARIABLES*/
 
     MoveObj player1;
-    MoveObj[] objs = new MoveObj[21];
+    List<MoveObj> objs = new ArrayList<>();
+    final int balls = 25;
+
+    CollisionManager collider;
+
     int screenW;
     int screenH;
 
     MainActivity parent;
 
     int highScore = 0;
-    int score = 0;
+    int score = 3;
     int timeSoFar = 0;
 
     /*VARIABLES*/
@@ -51,8 +55,10 @@ public class DrawView2 extends View {
         screenH = h;
         // initialise the objs array by creating a new MoveObj object for each entry in the array
         // TODO - maybe only do this if null
-        player1 = objs[0] = new MoveObj(100, w, h);
-        for (int bCount = 1; bCount < objs.length; bCount++) objs[bCount] = new MoveObj( w, h);
+        player1 = new MoveObj(100, 40, w, h);
+        objs.add(player1);
+        for (int bCount = 1; bCount < balls; bCount++) objs.add(new MoveObj(screenW, screenH));
+
     }
 
     /* BIT FOR TOUCHING! */
@@ -94,75 +100,13 @@ public class DrawView2 extends View {
         parent.ScoreText.setText("Score: "+ score);
         parent.TimeLeftText.setText("Seconds: "+Math.round(timeSoFar/25));
 
-
-        double dt=1;
-        while (dt>=0) {
-            // First, move each object forward in time
-            for (MoveObj obj : objs) obj.move(screenW,screenH,dt);
-            dt=-1;
-
-            //find first collision and rewind to that point.
-            List<CollisionRec> collisions = new ArrayList<CollisionRec>();
-
-            // count for each entry in the objs array and then check for collision against all of the subsequent ones.
-            for (int bCount1 = 0; bCount1 < objs.length; bCount1++) {
-                for (int bCount2 = bCount1 + 1; bCount2 < objs.length; bCount2++) {
-                    double time = objs[bCount1].objCollisionTime(objs[bCount2]);
-                    if (time>1) { Log.d("error","time of "+time + " on "+objs[bCount1] + objs[bCount2]); time=0; }
-                    if (time >= 0) collisions.add(new CollisionRec(time,objs[bCount1],objs[bCount2]));
-                }
-            }
-
-            // check wall collisions also
-            for (MoveObj obj : objs) {
-                double time = obj.wallCollisionTime(screenW, screenH);
-                if (time>1) { time=0; Log.d("error","on "+obj);}
-                if (time >= 0) collisions.add(new CollisionRec(time,obj,null));
-
-            }
-
-            Collections.sort(collisions, new Comparator<CollisionRec>() {
-                public int compare(CollisionRec a, CollisionRec b) {
-                    return (a.time > b.time)?-1:1;
-                }
-            });
-
-            if (!collisions.isEmpty()) {
-
-                dt=collisions.get(0).time;
-
-                // First, rewind each object back to time of first collision.
-                Log.d("rewind to collision", "at: " + dt);
-                for (MoveObj obj : objs) obj.move(screenW,screenH,-dt);
-
-                // handle all the collisions starting at earliest time - if 2nd obj is null, then a wall collision
-                for (CollisionRec coll : collisions) {
-                    if (coll.time<dt) break;
-                    if (coll.objb == null) coll.obja.wallCollision(screenW, screenH);
-                    else coll.obja.objCollision(coll.objb);
-                }
-            }
+        // handle all the collisions starting at earliest time - if 2nd obj is null, then a wall collision
+        //if any collisions,
+        collider.collide(objs);
+        for (CollisionManager.CollisionRec coll : collider.collisions) {
+            if (coll.objb == null) continue; //ignore a wall collision
+            if (coll.obja.type == 100 && coll.objb.type == 0) score++;
         }
 
-        // Once the collisions have been handled, draw each object.
-        for (MoveObj obj : objs) obj.draw(canvas);
-
-
-    }
-
-
-    public class CollisionRec {
-        double time;
-        MoveObj obja;
-        MoveObj objb;
-
-
-        public CollisionRec(double time, MoveObj obja, MoveObj objb) {
-            this.time = time;
-            this.obja = obja;
-            this.objb = objb;
-        }
-    }
-
-
+     }
 }

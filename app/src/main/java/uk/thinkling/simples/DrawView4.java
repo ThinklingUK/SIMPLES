@@ -21,11 +21,14 @@ public class DrawView4 extends View {
 
     MoveObj player1;
     List<MoveObj> objs = new ArrayList<>();
+    CollisionManager collider;
 
     int screenW;
     int screenH;
 
     int gameState = 0;
+    final int balls = 25;
+    final int startSeconds = 100;
 
     MainActivity parent;
 
@@ -50,6 +53,7 @@ public class DrawView4 extends View {
         Log.d("onMeasure", w + " "+ h);
         screenW = w;
         screenH = h;
+        collider = new CollisionManager(w,h);
         // initialise the objs array by creating a new MoveObj object for each entry in the array
     }
 
@@ -69,11 +73,11 @@ public class DrawView4 extends View {
                 } else {
                     gameState = 1;
                     objs.clear();
-                    objs.add(new MoveObj(100, screenW, screenH));
+                    objs.add(new MoveObj(100, 40, screenW, screenH));
                     player1 = objs.get(0);
-                    for (int bCount = 1; bCount < 20; bCount++) objs.add(new MoveObj(screenW, screenH));
-                    objs.add(new MoveObj(0, screenW, screenH));
-                    seconds=100;
+                    for (int bCount = 1; bCount < balls; bCount++) objs.add(new MoveObj(screenW, screenH));
+                    objs.add(new MoveObj(0, screenW, screenH)); //make sure at least one white ball
+                    seconds=startSeconds;
                   }
         }
 
@@ -88,76 +92,29 @@ public class DrawView4 extends View {
         super.onDraw(canvas);
 
         if (gameState == 0) {
-            highScore = Math.max(highScore, score);
             score = 0;
         }else{
 
-            //Timer: Every 10 Seconds Add 1 To Score
+            //Timer: Counts down to timeout
             timeSoFar++;
             if (timeSoFar % 25 == 0) {
                 seconds--;
             }
+            highScore = Math.max(highScore, score);
+
 
         /*Score's Text*/
-            parent.HighScoreText.setText("High Score: " + highScore);
+            parent.HighScoreText.setText("High: " + highScore);
             parent.ScoreText.setText("Score: " + score);
             parent.TimeLeftText.setText("Seconds: " + seconds);
 
-            double dt = 0;
-
-            while (dt < 1) {
-
-                //find first collision and forward wind to that point.
-                List<CollisionRec> collisions = new ArrayList<CollisionRec>();
-
-                // count for each entry in the objs array and then check for collision against all of the subsequent ones.
-                //ignore if time is more than 1 (wait for next cycle)
-                for (int bCount1 = 0; bCount1 < objs.size(); bCount1++) {
-                    for (int bCount2 = bCount1 + 1; bCount2 < objs.size(); bCount2++) {
-                        double time = objs.get(bCount1).TimeOfClosestApproach(objs.get(bCount2));
-                        if (time < 1 && time >= 0)
-                            collisions.add(new CollisionRec(time, objs.get(bCount1), objs.get(bCount2)));
-                    }
-                }
-
-                // check wall collisions also
-                for (MoveObj obj : objs) {
-                    double time = obj.wallCollisionTime(screenW, screenH);
-                    if (time < 1 && time >= 0) collisions.add(new CollisionRec(time, obj, null));
-                }
-
-
-                Collections.sort(collisions, new Comparator<CollisionRec>() {
-                    public int compare(CollisionRec a, CollisionRec b) {
-                        return (a.time > b.time) ? -1 : 1;
-                    }
-                });
-
-                double t;
-
-                if (collisions.isEmpty()) {
-                    t = 1 - dt;
-                } else {
-                    t = collisions.get(0).time;
-                }
-
-                // First, wind each object to time of first collision.
-                for (MoveObj obj : objs) obj.move(screenW, screenH, t);
-
-                // handle all the collisions starting at earliest time - if 2nd obj is null, then a wall collision
-                for (CollisionRec coll : collisions) {
-                    if (coll.time > t) break;
-                    if (coll.objb == null) coll.obja.wallCollision(screenW, screenH);
-                    else {
-                        coll.obja.objCollision(coll.objb);
-                        if (coll.obja.type == 0) coll.objb.state = 0;
-                        else if (coll.objb.type == 0) coll.obja.state = 0;
-                    }
-                }
-
-                // update dt (becomes 1 if no collisions)
-                dt += t;
-
+            // handle all the collisions starting at earliest time - if 2nd obj is null, then a wall collision
+            //if any collisions,
+            collider.collide(objs);
+            for (CollisionManager.CollisionRec coll : collider.collisions) {
+                if (coll.objb == null) continue; //ignore a wall collision
+                if (coll.obja.type == 0) coll.objb.state = 0;
+                else if (coll.objb.type == 0) coll.obja.state = 0;
             }
 
             int balls_left = 0;
@@ -178,26 +135,11 @@ public class DrawView4 extends View {
 
             if (balls_left == 1) {
                 score += seconds;
-                seconds += 100;
-                for (int bCount = 1; bCount < 20; bCount++) objs.add(new MoveObj(screenW, screenH));
+                seconds += startSeconds;
+                for (int bCount = 1; bCount < balls; bCount++) objs.add(new MoveObj(screenW, screenH));
             }
+
             if (player1.radius == 0 || seconds<=0) gameState=0;
         }
     }
-
-
-    public class CollisionRec {
-        double time;
-        MoveObj obja;
-        MoveObj objb;
-
-
-        public CollisionRec(double time, MoveObj obja, MoveObj objb) {
-            this.time = time;
-            this.obja = obja;
-            this.objb = objb;
-        }
-    }
-
-
 }
