@@ -53,6 +53,9 @@ public class DrawView2 extends View {
         Log.d("onMeasure", w + " "+ h);
         screenW = w;
         screenH = h;
+
+        collider = new CollisionManager(w, h);
+
         // initialise the objs array by creating a new MoveObj object for each entry in the array
         // TODO - maybe only do this if null
         player1 = new MoveObj(100, 40, w, h);
@@ -107,6 +110,8 @@ public class DrawView2 extends View {
             if (coll.objb == null) continue; //ignore a wall collision
             if (coll.obja.type == 100 && coll.objb.type == 0) score++;
         }
+
+        for (MoveObj obj : objs) obj.draw(canvas);
 
      }
 }

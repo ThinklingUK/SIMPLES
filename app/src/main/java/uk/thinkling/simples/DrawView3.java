@@ -29,6 +29,8 @@ public class DrawView3 extends View {
 
     int screenW;
     int screenH;
+    int bedH;
+    int coinR;
     int currObj = 0;
 
     MainActivity parent;
@@ -39,6 +41,7 @@ public class DrawView3 extends View {
     int timeSoFar = 0;
 
     static Paint linepaint = new Paint();
+    static Paint outlinepaint = new Paint();
 
 
     /*VARIABLES*/
@@ -50,21 +53,27 @@ public class DrawView3 extends View {
         parent = (MainActivity) this.getContext();
         gdc = new GestureDetectorCompat(parent, new MyGestureListener()); // create the gesture detector
         linepaint.setColor(Color.parseColor("#CD7F32"));
+        linepaint.setStyle(Paint.Style.STROKE);
         linepaint.setStrokeWidth(3f);
+        outlinepaint.setColor(Color.parseColor("#FFFFFF"));
+        outlinepaint.setStyle(Paint.Style.STROKE);
+        outlinepaint.setStrokeWidth(3f);
     }
 
 
-    // this happens if the scren size changes - including the first timeit is measured. Here is where we get width and height
+    // this happens if the screen size changes - including the first timeit is measured. Here is where we get width and height
     @Override
     protected void onSizeChanged(int w, int h, int oldW, int oldH) {
         Log.d("onMeasure", w + " " + h);
         screenW = w;
         screenH = h;
+        bedH=h/15;
+        coinR=bedH/3;
 
         collider = new CollisionManager(w, h);
 
         // create the first ball
-        player1 = new MoveObj(11 + currObj % 2, 30, screenW / 2, screenH - 80, 5, 0);
+        player1 = new MoveObj(11 + currObj % 2, coinR, screenW / 2, screenH - bedH, 5, 0);
         objs.add(player1);
     }
 
@@ -143,7 +152,7 @@ public class DrawView3 extends View {
 //            else if (coll.objb.type == 0) coll.obja.state = 0;
         }
 
-        for (int f = 0; f < 10; f++) canvas.drawLine(0, f * 80 + 100, screenW, f * 80 + 100, linepaint);
+        for (int f = 0; f < 10; f++) canvas.drawLine(0, f * bedH + 2*bedH, screenW, f * bedH + 2*bedH, linepaint);
 
         // Once the collisions have been handled, draw each object and apply friction
         //use iterator to allow removal from list
@@ -152,15 +161,20 @@ public class DrawView3 extends View {
         while (i.hasNext()) {
             MoveObj obj = i.next(); // must be called before you can call i.remove()
             obj.draw(canvas);
+            //if the coin is within a bed, highlight it. TODO - add a temporary score to the player
+            if (obj.y<11*bedH&&(obj.y-2*bedH)%bedH>coinR&&(obj.y-2*bedH)%bedH<bedH-coinR)
+                canvas.drawCircle(obj.x, obj.y, obj.radius, outlinepaint);
             obj.applyFriction(0.93f);
             if (obj.xSpeed != 0 || obj.ySpeed != 0) motion = true;
         }
 
         if (!motion && player1.state == 0) {
             currObj++;
-            player1 = new MoveObj(11 + currObj % 2, 30, screenW / 2, screenH - 80, 5, 0);
+            player1 = new MoveObj(11 + currObj % 2, coinR, screenW / 2, screenH - bedH, 5, 0);
             objs.add(player1);
         }
+
+        //TODO total the scores
 
     }
 }
