@@ -40,8 +40,8 @@ public class DrawView3 extends View {
     int score = 0;
     int timeSoFar = 0;
 
-    static Paint linepaint = new Paint();
-    static Paint outlinepaint = new Paint();
+    static Paint linepaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    static Paint outlinepaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
 
     /*VARIABLES*/

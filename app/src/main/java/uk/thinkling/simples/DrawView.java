@@ -37,10 +37,9 @@ public class DrawView extends View {
     /*VARIABLES*/
 
     // make a new Paint object and store it in myPaint
-    Paint paint1 = new Paint();
-    Paint paint2 = new Paint();
-    Paint paint3 = new Paint();
-    Paint paint4 = new Paint();
+    Paint paint1 = new Paint(Paint.ANTI_ALIAS_FLAG);
+    Paint paint2 = new Paint(Paint.ANTI_ALIAS_FLAG);
+    Paint paint3 = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     // this is the constructor - it is called when an instance of this class is created
     public DrawView(Context context, AttributeSet attrs) {
