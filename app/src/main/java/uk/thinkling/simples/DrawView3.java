@@ -23,21 +23,22 @@ public class DrawView3 extends View {
 
     /*VARIABLES*/
 
-    MoveObj player1;
+    MoveObj inPlay;
     List<MoveObj> objs = new ArrayList<>();
     CollisionManager collider;
 
-    int screenW;
-    int screenH;
-    int bedH;
-    int coinR;
-    int currObj = 0;
+    int screenW, screenH, bedH, coinR, startZone;
+    final float factor = 0.93f;
+    final float bedSpace=0.8f; // NB: includes end space and free bed before first line.
+    final int beds=3, maxCoins=5;
+    int coinCount = 0;
+    int playerNum = 0;
+    int[][] score = new int[2][beds+1];
 
     MainActivity parent;
     private final GestureDetectorCompat gdc;
 
     int highScore = 0;
-    int score = 0;
     int timeSoFar = 0;
 
     static Paint linepaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -55,9 +56,12 @@ public class DrawView3 extends View {
         linepaint.setColor(Color.parseColor("#CD7F32"));
         linepaint.setStyle(Paint.Style.STROKE);
         linepaint.setStrokeWidth(3f);
+        linepaint.setTextSize(30);
         outlinepaint.setColor(Color.parseColor("#FFFFFF"));
         outlinepaint.setStyle(Paint.Style.STROKE);
         outlinepaint.setStrokeWidth(3f);
+        for (int f = 0; f<score.length; f++) score[0][f]=score[1][f]=0; //set scores to zero
+
     }
 
 
@@ -67,14 +71,14 @@ public class DrawView3 extends View {
         Log.d("onMeasure", w + " " + h);
         screenW = w;
         screenH = h;
-        bedH=h/15;
+        bedH = Math.round(h*bedSpace/(beds+3)); //2 extra beds for end and free space after flickzone
         coinR=bedH/3;
-
+        startZone=(beds+2)*bedH+coinR;
         collider = new CollisionManager(w, h);
 
         // create the first ball
-        player1 = new MoveObj(11 + currObj % 2, coinR, screenW / 2, screenH - bedH, 5, 0);
-        objs.add(player1);
+        inPlay = new MoveObj(11, coinR, screenW / 2, screenH - bedH, 5, 0);
+        objs.add(inPlay);
     }
 
     /* BIT FOR TOUCHING! */
@@ -90,11 +94,10 @@ public class DrawView3 extends View {
 
         @Override
         public boolean onDown(MotionEvent e) {
-            Log.d(DEBUG_TAG, "onDown: " + e.toString());
-            if (player1.state == 1) {
-                player1.xSpeed = player1.ySpeed = 0;
-                player1.x = e.getX();
-                player1.y = e.getY();
+            if (inPlay.state == 1 && e.getY()> startZone) {
+                inPlay.xSpeed = inPlay.ySpeed = 0;
+                inPlay.x = e.getX();
+                inPlay.y = e.getY();
             }
             return true;
         }
@@ -102,22 +105,20 @@ public class DrawView3 extends View {
         @Override
         public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
             // effectively a Drag detector - although would need to check that we have hit a ball first.
-            Log.d(DEBUG_TAG, "onScroll: " + e2.toString());
-            if (player1.state == 1) {
-                player1.xSpeed = player1.ySpeed = 0;
-                player1.x = e2.getX();
-                player1.y = e2.getY();
+            if (inPlay.state == 1 && e2.getY()>startZone) {
+                inPlay.xSpeed = inPlay.ySpeed = 0;
+                inPlay.x = e2.getX();
+                inPlay.y = e2.getY();
             }
             return true;
         }
 
         @Override
         public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
-            Log.d(DEBUG_TAG, "onFling: " + e1.toString() + e2.toString());
-            if (player1.state == 1) {
-                player1.xSpeed = velocityX / 25;
-                player1.ySpeed = velocityY / 25;
-                player1.state = 0;
+            if (inPlay.state == 1 && e2.getY()>startZone) {
+                inPlay.xSpeed = velocityX / 25;
+                inPlay.ySpeed = velocityY / 25;
+                inPlay.state = 0;
             }
             return true;
         }
@@ -131,17 +132,11 @@ public class DrawView3 extends View {
 
         super.onDraw(canvas);
 
-        //Timer: Every 10 Seconds Add 1 To Score
- /*       timeSoFar++;
-        if(timeSoFar% 250 == 0){
-           score++;
-           if(score > highScore)    highScore = score;
-        }*/
-
         /*Score's Text*/
-/*        parent.HighScoreText.setText("High Score: "+highScore);
-        parent.ScoreText.setText("Score: "+ score);
-        parent.TimeLeftText.setText("Seconds: "+Math.round(timeSoFar/25));*/
+       // parent.HighScoreText.setText("High Score: "+highScore);
+        parent.TimeLeftText.setText("P1: "+ score[0][0]);
+        parent.ScoreText.setText("P2: "+ score[1][0]);
+
 
         // handle all the collisions starting at earliest time - if 2nd obj is null, then a wall collision
 
@@ -150,9 +145,21 @@ public class DrawView3 extends View {
 //            if (coll.objb == null) continue; //ignore a wall collision
 //            if (coll.obja.type == 0) coll.objb.state = 0;
 //            else if (coll.objb.type == 0) coll.obja.state = 0;
+            //TODO if a wall collision, may void the coin
         }
 
-        for (int f = 0; f < 10; f++) canvas.drawLine(0, f * bedH + 2*bedH, screenW, f * bedH + 2*bedH, linepaint);
+
+        //Draw the sidelines and Beds (NB: the screen has a 2bed endzone, 9 full beds, a 1 bed exlusion and 3 bed fling zone)
+        for (int f = 0; f <= beds; f++) {
+            canvas.drawLine(0, f * bedH + 2*bedH, screenW, f * bedH + 2*bedH, linepaint);
+            if (f<beds) {
+                canvas.drawText(""+(beds-f),screenW/2,f * bedH + 2.6f*bedH, linepaint);
+                canvas.drawText(""+score[0][beds-f],bedH/2,f * bedH + 2.6f*bedH, linepaint);
+                canvas.drawText(""+score[1][beds-f],screenW-bedH/2,f * bedH + 2.6f*bedH, linepaint);
+            }
+        }
+        canvas.drawLine(bedH, 0, bedH, screenH, linepaint);
+        canvas.drawLine(screenW-bedH, 0, screenW-bedH, screenH, linepaint);
 
         // Once the collisions have been handled, draw each object and apply friction
         //use iterator to allow removal from list
@@ -162,20 +169,61 @@ public class DrawView3 extends View {
             MoveObj obj = i.next(); // must be called before you can call i.remove()
             obj.draw(canvas);
             //if the coin is within a bed, highlight it. TODO - add a temporary score to the player
-            if (obj.y<11*bedH&&(obj.y-2*bedH)%bedH>coinR&&(obj.y-2*bedH)%bedH<bedH-coinR)
+            if (getBed((int)obj.y)>0)
                 canvas.drawCircle(obj.x, obj.y, obj.radius, outlinepaint);
-            obj.applyFriction(0.93f);
+            obj.applyFriction(factor);
             if (obj.xSpeed != 0 || obj.ySpeed != 0) motion = true;
         }
 
-        if (!motion && player1.state == 0) {
-            currObj++;
-            player1 = new MoveObj(11 + currObj % 2, coinR, screenW / 2, screenH - bedH, 5, 0);
-            objs.add(player1);
+        //if there is a ball in play and all motion stops, either new ball or return the ball if played short.
+        if (!motion && inPlay.state == 0) {
+            if (inPlay.y < startZone) {
+                coinCount++;
+                // all coins played, so add score
+                if (coinCount>=maxCoins) {
+                    i = objs.iterator();
+                    while (i.hasNext()) {
+                        MoveObj obj = i.next(); // must be called before you can call i.remove()
+                        //if the coin is within a bed, highlight it. TODO - add a temporary score to the player
+                        int bed = getBed((int)obj.y);
+                        if (bed>0) {
+                            score[playerNum][0] += bed; //add the score onto player total
+                            //if already three, increment opponent up to three, else increment player
+                            if (score[playerNum][bed]>=3) score[1-playerNum][bed]+=score[1-playerNum][bed]<3?1:0;
+                            else score[playerNum][bed]++;
+
+                        }
+                    }
+                    coinCount=0;
+                    playerNum=1-playerNum;
+                    objs.clear();
+
+                    // TODO - if progressive then return some coins
+                }
+
+                // TODO in combat mode we alternate playerNum
+                inPlay = new MoveObj(11 + playerNum, coinR, screenW / 2, screenH - bedH, 5, 0);
+                objs.add(inPlay);
+            } else {
+                inPlay.state = 1;
+                inPlay.ySpeed =1;
+            }
+
         }
 
-        //TODO total the scores
+        // TODO display potential scores
 
+
+
+
+
+    }
+
+    private int getBed(int pos){
+        if (pos>startZone) return -1; // not even reached first line
+        if ((pos+coinR)< 2*bedH) return 0; // in the endzone
+        if ((pos-coinR)%bedH>coinR) return 0; //overlapping. so no score
+        return (beds+2-((pos-coinR)/bedH));
     }
 }
 

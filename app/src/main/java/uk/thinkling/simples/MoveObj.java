@@ -120,8 +120,8 @@ public class MoveObj {
         // slow the object based on factor
         xSpeed*=factor;
         ySpeed*=factor;
-        if (Math.abs(xSpeed)<0.01f) xSpeed=0;
-        if (Math.abs(ySpeed)<0.01f) ySpeed=0;
+        if (Math.abs(xSpeed)<0.1f) xSpeed=0;
+        if (Math.abs(ySpeed)<0.1f) ySpeed=0;
 
     }
 
