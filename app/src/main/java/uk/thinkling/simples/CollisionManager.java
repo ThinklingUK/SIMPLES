@@ -66,7 +66,8 @@ public class CollisionManager {
             // handle all the collisions starting at earliest time - if 2nd obj is null, then a wall collision
             for (CollisionRec coll : nextCollisions) {
                 if (coll.time > t) break; // if non-consecutive collision, ignore all subsequent collisions
-                if (doCollision(coll.obja, coll.objb)) collisions.add(coll); // add this collision to list for analysis
+//                if (doCollision(coll.obja, coll.objb)) collisions.add(coll); // add this collision to list for analysis
+                if (coll.doCollision()) collisions.add(coll); // add this collision to list for analysis
             }
 
             // update dt (becomes 1 if no collisions)
@@ -81,6 +82,7 @@ public class CollisionManager {
         double time;
         MoveObj obja;
         MoveObj objb;
+        double impactV=0;
 
 
         private CollisionRec(double time, MoveObj obja, MoveObj objb) {
@@ -88,6 +90,54 @@ public class CollisionManager {
             this.obja = obja;
             this.objb = objb;
         }
+
+        public boolean doCollision() {
+
+            //could be a wall bounce
+            if (objb == null){
+                // Makes object bounce on edges by reversing velocity (if it was about to hit - this introduces errors at high speed.
+                if (obja.x + obja.xSpeed <= obja.radius || obja.x + obja.xSpeed + obja.radius >= width) obja.xSpeed = -obja.xSpeed;
+                if (obja.y + obja.ySpeed <= obja.radius || obja.y + obja.ySpeed + obja.radius >= height) obja.ySpeed = -obja.ySpeed;
+                // store impact velocity for sound
+                impactV = Math.sqrt(obja.xSpeed*obja.xSpeed+obja.ySpeed*obja.ySpeed);
+                return true; //true if tracking wall bounces
+            }
+
+            double mass_ratio, dvx2, norm, fy21, sign;
+
+            float dX = objb.x - obja.x;
+            float dY = objb.y - obja.y;
+
+
+            mass_ratio = objb.mass / obja.mass;
+            double vX = objb.xSpeed - obja.xSpeed;
+            double vY = objb.ySpeed - obja.ySpeed;
+
+            impactV = Math.sqrt(vX*vX+vY*vY);
+
+            if ((vX * dX + vY * dY) >= 0)
+                return false;  //return false with unchanged speeds if balls are not approaching
+
+            // to avoid a zero divide; (for single precision calculations, 1.0E-12 should be replaced by a larger value). **************
+            fy21 = 1.0E-12 * Math.abs(dY);
+            if (Math.abs(dX) < fy21) {
+                sign = (dX < 0) ? -1 : 1;
+                dX = (float) (fy21 * sign);
+            }
+
+            //     ***  update velocities ***
+            norm = dY / dX;
+            dvx2 = -2 * (vX + norm * vY) / ((1 + norm * norm) * (1 + mass_ratio));
+            objb.xSpeed += dvx2;
+            objb.ySpeed += norm * dvx2;
+            obja.xSpeed -= mass_ratio * dvx2;
+            obja.ySpeed -= norm * mass_ratio * dvx2;
+
+//TODO - limit velocities so they're not too high (e.g. screen size/25)
+            return true;
+
+        }
+
     }
 
     /// Calculate the time of impact of an object with bounding walls.
@@ -146,7 +196,7 @@ public class CollisionManager {
     }
 
     public boolean doCollision(MoveObj obj1, MoveObj obj2) {
-
+        // NB: now moved into collisionrec
         //could be a wall bounce
         if (obj2 == null){
             // Makes object bounce on edges by reversing velocity (if it was about to hit - this introduces errors at high speed.
@@ -155,18 +205,18 @@ public class CollisionManager {
             return false; //currently not tracking wall bounces - may want to return true at some point
         }
 
-        double mass_ratio, dvx2, norm, xSpeedDiff, ySpeedDiff, fy21, sign;
+        double mass_ratio, dvx2, norm, fy21, sign;
 
         float dX = obj2.x - obj1.x;
         float dY = obj2.y - obj1.y;
 
 
         mass_ratio = obj2.mass / obj1.mass;
-        xSpeedDiff = obj2.xSpeed - obj1.xSpeed;
-        ySpeedDiff = obj2.ySpeed - obj1.ySpeed;
+        double vX = obj2.xSpeed - obj1.xSpeed;
+        double vY = obj2.ySpeed - obj1.ySpeed;
 
-        if ((xSpeedDiff * dX + ySpeedDiff * dY) >= 0)
-            return false;  //return old velocities if balls are not approaching
+        if ((vX * dX + vY * dY) >= 0)
+            return false;  //return false with unchanged speeds if balls are not approaching
 
         // to avoid a zero divide; (for single precision calculations, 1.0E-12 should be replaced by a larger value). **************
         fy21 = 1.0E-12 * Math.abs(dY);
@@ -177,7 +227,7 @@ public class CollisionManager {
 
         //     ***  update velocities ***
         norm = dY / dX;
-        dvx2 = -2 * (xSpeedDiff + norm * ySpeedDiff) / ((1 + norm * norm) * (1 + mass_ratio));
+        dvx2 = -2 * (vX + norm * vY) / ((1 + norm * norm) * (1 + mass_ratio));
         obj2.xSpeed += dvx2;
         obj2.ySpeed += norm * dvx2;
         obj1.xSpeed -= mass_ratio * dvx2;

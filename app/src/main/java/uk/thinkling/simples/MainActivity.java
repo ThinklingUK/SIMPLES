@@ -1,5 +1,10 @@
 package uk.thinkling.simples;
 
+import android.annotation.TargetApi;
+import android.media.AudioAttributes;
+import android.media.AudioManager;
+import android.media.SoundPool;
+import android.os.Build;
 import android.os.Handler;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
@@ -15,6 +20,8 @@ public class MainActivity extends ActionBarActivity {
 
     View myDrawView;
     Handler mHandler;
+    SoundPool player;
+    int clinkSound, clunkSound, placeSound, slideSound;
 
     public TextView ScoreText,TimeLeftText,HighScoreText;
     ViewGroup parent;
@@ -39,6 +46,35 @@ public class MainActivity extends ActionBarActivity {
         // start the timer handler that will invalidate the view
         mHandler = new Handler();
         mHandler.postDelayed(mRunnable, 1000);
+
+        //set up the sound player
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            createSoundPoolWithBuilder();
+        } else{
+            createSoundPoolWithConstructor();
+        }
+        clinkSound = player.load(this, R.raw.clink, 1);
+        clunkSound = player.load(this, R.raw.clunk, 1);
+        placeSound = player.load(this, R.raw.place, 1);
+        slideSound = player.load(this, R.raw.slide, 1);
+    }
+
+
+
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+    protected void createSoundPoolWithBuilder(){
+        AudioAttributes attributes = new AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_GAME)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build();
+
+        player = new SoundPool.Builder().setAudioAttributes(attributes).setMaxStreams(6).build();
+    }
+
+    @SuppressWarnings("deprecation")
+    protected void createSoundPoolWithConstructor(){
+        player = new SoundPool(6, AudioManager.STREAM_MUSIC, 0);
     }
 
     // this is the runnable action that is called by the handler - it will add itself to the handler again after delay

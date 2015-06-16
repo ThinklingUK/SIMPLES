@@ -27,7 +27,7 @@ public class DrawView4 extends View {
     int screenH;
 
     int gameState = 0;
-    final int balls = 25;
+    final int balls = 20;
     final int startSeconds = 100;
 
     MainActivity parent;
@@ -109,12 +109,15 @@ public class DrawView4 extends View {
             parent.TimeLeftText.setText("Seconds: " + seconds);
 
             // handle all the collisions starting at earliest time - if 2nd obj is null, then a wall collision
-            //if any collisions,
+            // if any collisions, deal with change and play sounds etc.
             collider.collide(objs);
             for (CollisionManager.CollisionRec coll : collider.collisions) {
                 if (coll.objb == null) continue; //ignore a wall collision
                 if (coll.obja.type == 0) coll.objb.state = 0;
                 else if (coll.objb.type == 0) coll.obja.state = 0;
+                float volume = Math.min((float)coll.impactV/100,1);
+                float impactS = 1; //could be 0.5 to 2.0 x speed
+                parent.player.play(parent.clinkSound,volume,volume,1,0,impactS);
             }
 
             int balls_left = 0;
@@ -125,7 +128,7 @@ public class DrawView4 extends View {
                 MoveObj obj = i.next(); // must be called before you can call i.remove()
                 balls_left += (obj.type == 0) ? 0 : 1;
                 obj.draw(canvas);
-                obj.applyFriction(0.985f);
+                obj.applyFrictionGravity(0.985f, 0f);
                 if (obj.state == 0) obj.radius -= 1;
                 if (obj.radius == 0) {
                     i.remove();

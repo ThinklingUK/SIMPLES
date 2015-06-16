@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.media.AudioManager;
 import android.support.annotation.NonNull;
 import android.support.v4.view.GestureDetectorCompat;
 import android.util.AttributeSet;
@@ -30,16 +31,13 @@ public class DrawView3 extends View {
     int screenW, screenH, bedH, coinR, startZone;
     final float factor = 0.93f;
     final float bedSpace=0.8f; // NB: includes end space and free bed before first line.
-    final int beds=3, maxCoins=5;
+    final int beds=9, maxCoins=5;
     int coinCount = 0;
     int playerNum = 0;
     int[][] score = new int[2][beds+1];
 
     MainActivity parent;
     private final GestureDetectorCompat gdc;
-
-    int highScore = 0;
-    int timeSoFar = 0;
 
     static Paint linepaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     static Paint outlinepaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -55,7 +53,7 @@ public class DrawView3 extends View {
         gdc = new GestureDetectorCompat(parent, new MyGestureListener()); // create the gesture detector
         linepaint.setColor(Color.parseColor("#CD7F32"));
         linepaint.setStyle(Paint.Style.STROKE);
-        linepaint.setStrokeWidth(3f);
+        linepaint.setStrokeWidth(3f); //TODO set based on screensize
         linepaint.setTextSize(30);
         outlinepaint.setColor(Color.parseColor("#FFFFFF"));
         outlinepaint.setStyle(Paint.Style.STROKE);
@@ -79,6 +77,7 @@ public class DrawView3 extends View {
         // create the first ball
         inPlay = new MoveObj(11, coinR, screenW / 2, screenH - bedH, 5, 0);
         objs.add(inPlay);
+        parent.player.play(parent.placeSound,1,1,1,0,1);
     }
 
     /* BIT FOR TOUCHING! */
@@ -118,7 +117,6 @@ public class DrawView3 extends View {
             if (inPlay.state == 1 && e2.getY()>startZone) {
                 inPlay.xSpeed = velocityX / 25;
                 inPlay.ySpeed = velocityY / 25;
-                inPlay.state = 0;
             }
             return true;
         }
@@ -132,24 +130,8 @@ public class DrawView3 extends View {
 
         super.onDraw(canvas);
 
-        /*Score's Text*/
-       // parent.HighScoreText.setText("High Score: "+highScore);
-        parent.TimeLeftText.setText("P1: "+ score[0][0]);
-        parent.ScoreText.setText("P2: "+ score[1][0]);
 
-
-        // handle all the collisions starting at earliest time - if 2nd obj is null, then a wall collision
-
-        collider.collide(objs);
-        for (CollisionManager.CollisionRec coll : collider.collisions) {
-//            if (coll.objb == null) continue; //ignore a wall collision
-//            if (coll.obja.type == 0) coll.objb.state = 0;
-//            else if (coll.objb.type == 0) coll.obja.state = 0;
-            //TODO if a wall collision, may void the coin
-        }
-
-
-        //Draw the sidelines and Beds (NB: the screen has a 2bed endzone, 9 full beds, a 1 bed exlusion and 3 bed fling zone)
+        //Draw the sidelines and Beds (NB: the screen has a 2bed endzone, 9 full beds, a 1 bed exclusion and 3 bed fling zone)
         for (int f = 0; f <= beds; f++) {
             canvas.drawLine(0, f * bedH + 2*bedH, screenW, f * bedH + 2*bedH, linepaint);
             if (f<beds) {
@@ -161,6 +143,29 @@ public class DrawView3 extends View {
         canvas.drawLine(bedH, 0, bedH, screenH, linepaint);
         canvas.drawLine(screenW-bedH, 0, screenW-bedH, screenH, linepaint);
 
+
+        /*Score's Text*/
+        parent.HighScoreText.setText("Player "+ (playerNum+1));
+        parent.TimeLeftText.setText("P1: "+ score[0][0]);
+        parent.ScoreText.setText("P2: "+ score[1][0]);
+
+
+        // handle all the collisions starting at earliest time - if 2nd obj is null, then a wall collision
+        // Collision manager also moves the objects.
+        collider.collide(objs);
+        for (CollisionManager.CollisionRec coll : collider.collisions) {
+            //TODO set pitch based on size of the objects.
+            float volume = Math.min((float) coll.impactV / 100, 1); //set the volume based on impact speed
+            if (coll.objb == null) {  //if a wall collision
+                //TODO if a wall collision, may void the coin
+                parent.player.play(parent.clunkSound, volume, volume, 2, 0, 1);
+            } else {
+                parent.player.play(parent.clinkSound, volume, volume, 2, 0, 1);
+            }
+        }
+
+
+
         // Once the collisions have been handled, draw each object and apply friction
         //use iterator to allow removal from list
         boolean motion = false;
@@ -171,13 +176,36 @@ public class DrawView3 extends View {
             //if the coin is within a bed, highlight it. TODO - add a temporary score to the player
             if (getBed((int)obj.y)>0)
                 canvas.drawCircle(obj.x, obj.y, obj.radius, outlinepaint);
-            obj.applyFriction(factor);
-            if (obj.xSpeed != 0 || obj.ySpeed != 0) motion = true;
+            obj.applyFrictionGravity(factor, 0);
+            if (obj.xSpeed != 0 || obj.ySpeed != 0) {
+                motion = true;
+                //TODO perhaps add/adjust sliding sound based on overall speed here.
+                // if there is a streamID then adjust volume else start movement sound
+                float volume = Math.min( (float)Math.sqrt(obj.xSpeed*obj.xSpeed+obj.ySpeed*obj.ySpeed) / 50, 1); //set the volume based on impact speed TODO const or calc
+
+                if (obj.movingStreamID >0) {
+                    parent.player.setVolume(obj.movingStreamID,volume,volume);
+                    //adjust volume
+                } else {
+                    obj.movingStreamID = parent.player.play(parent.slideSound, volume, volume, 1, -1, 1);
+                }
+
+            }
+            else{
+                //stop any playing sound
+                if (obj.movingStreamID >0) {
+                    parent.player.stop(obj.movingStreamID);
+                    obj.movingStreamID=0;
+                }
+            }
+
+
         }
+        // if ball in play exits the start zone, then it cannot be touched
+        if (inPlay.state != 0 && inPlay.y < startZone) inPlay.state = 0;
 
         //if there is a ball in play and all motion stops, either new ball or return the ball if played short.
         if (!motion && inPlay.state == 0) {
-            if (inPlay.y < startZone) {
                 coinCount++;
                 // all coins played, so add score
                 if (coinCount>=maxCoins) {
@@ -201,20 +229,14 @@ public class DrawView3 extends View {
                     // TODO - if progressive then return some coins
                 }
 
+                // add a new coin
                 // TODO in combat mode we alternate playerNum
                 inPlay = new MoveObj(11 + playerNum, coinR, screenW / 2, screenH - bedH, 5, 0);
                 objs.add(inPlay);
-            } else {
-                inPlay.state = 1;
-                inPlay.ySpeed =1;
-            }
-
+                parent.player.play(parent.placeSound,1,1,1,0,1);
         }
 
         // TODO display potential scores
-
-
-
 
 
     }

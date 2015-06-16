@@ -19,6 +19,7 @@ public class MoveObj {
     double xSpeed;  // if these are int, then the speed will gradually slow down due to rounding.
     double ySpeed;
     int radius;
+    int movingStreamID = 0;
     double mass;
     int state=1;
     float angle; // rotational angle of the object
@@ -75,7 +76,7 @@ public class MoveObj {
 
     // This is the type specific constructor - it sets radius to random values
     public MoveObj(int type, int screenW, int screenH) {
-        this(type, type==0?40:rnd.nextInt(40) + 10, screenW, screenH); // get a random integer from 0 to 9 for the 'type'
+        this(type, type==0?40:rnd.nextInt(40) + 10, screenW, screenH); // get a random integer for the radius
     }
 
     // This is the default constructor - it sets the type to random values
@@ -115,13 +116,14 @@ public class MoveObj {
         }
     }
 
-    public void applyFriction(double factor) {
+    public void applyFrictionGravity(double factor, double gravity) {
 
         // slow the object based on factor
         xSpeed*=factor;
         ySpeed*=factor;
         if (Math.abs(xSpeed)<0.1f) xSpeed=0;
         if (Math.abs(ySpeed)<0.1f) ySpeed=0;
+        ySpeed+=gravity;
 
     }
 
