@@ -4,7 +4,6 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.media.AudioManager;
 import android.support.annotation.NonNull;
 import android.support.v4.view.GestureDetectorCompat;
 import android.util.AttributeSet;
@@ -179,7 +178,6 @@ public class DrawView3 extends View {
             obj.applyFrictionGravity(factor, 0);
             if (obj.xSpeed != 0 || obj.ySpeed != 0) {
                 motion = true;
-                //TODO perhaps add/adjust sliding sound based on overall speed here.
                 // if there is a streamID then adjust volume else start movement sound
                 float volume = Math.min( (float)Math.sqrt(obj.xSpeed*obj.xSpeed+obj.ySpeed*obj.ySpeed) / 50, 1); //set the volume based on impact speed TODO const or calc
 

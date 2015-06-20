@@ -37,7 +37,7 @@ public class MoveObj {
         this.xSpeed = xSpeed;
         this.ySpeed = ySpeed;
         this.radius = radius;
-        this.mass= 4 / 3 * 3.142 * radius * radius;;
+        this.mass= 4 / 3 * 3.142 * radius * radius;
 
         switch (type) {
             case 0:
