@@ -49,6 +49,7 @@ public class DrawView3 extends View {
     public DrawView3(Context context, AttributeSet attrs) {
         super(context, attrs);
         parent = (MainActivity) this.getContext();
+        parent.moveObjList=objs; //give parent access to the list for serialization etc.
         gdc = new GestureDetectorCompat(parent, new MyGestureListener()); // create the gesture detector
         linepaint.setColor(Color.parseColor("#CD7F32"));
         linepaint.setStyle(Paint.Style.STROKE);

@@ -1,18 +1,28 @@
 package uk.thinkling.simples;
 
 import android.annotation.TargetApi;
+import android.content.SharedPreferences;
 import android.media.AudioAttributes;
 import android.media.AudioManager;
 import android.media.SoundPool;
 import android.os.Build;
 import android.os.Handler;
+import android.preference.PreferenceManager;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.text.TextUtils;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import java.io.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 
 public class MainActivity extends ActionBarActivity {
@@ -27,6 +37,9 @@ public class MainActivity extends ActionBarActivity {
     ViewGroup parent;
     int index;
 
+    List<MoveObj> moveObjList;
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,6 +49,7 @@ public class MainActivity extends ActionBarActivity {
         // find the text views
         ScoreText = (TextView) findViewById(R.id.ScoreView);
         TimeLeftText = (TextView) findViewById(R.id.TimeLeftView);
+        HighScoreText = (TextView) findViewById(R.id.HighScoreText);
         HighScoreText = (TextView) findViewById(R.id.HighScoreText);
 
         // find the drawView, parent and index (for switching)
@@ -61,7 +75,76 @@ public class MainActivity extends ActionBarActivity {
     }
 
 
+    @Override
+    protected void onStop() {
+        super.onStop();
+    }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        String test ="";
+        try {
+            //Load lists from file or set defaults for some reason, | is not good delimiter
+            SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+            int hiscore = preferences.getInt("hiscore", 0);
+            test = preferences.getString("test", "prefs not found");
+
+        } catch (Exception e){
+            Log.d("LOADING LIST",  e.getMessage());
+        }
+        Toast.makeText(this, test, Toast.LENGTH_SHORT).show();
+
+
+        try {
+            File file = new File(getCacheDir(), "Thinkling");
+            ObjectInputStream is = new ObjectInputStream(new FileInputStream(file));
+            ArrayList newAL;
+            newAL = (ArrayList) is.readObject();
+            System.out.println(newAL);
+            moveObjList=newAL;
+            Toast.makeText(getBaseContext(), "onResume - OK", Toast.LENGTH_SHORT).show();
+        } catch (Exception ex){
+            //could be FileNotFoundException, IOException, ClassNotFoundException
+            Toast.makeText(getBaseContext(), "onResume - FAIL", Toast.LENGTH_SHORT).show();
+
+        }
+    }
+
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+
+        // Save application preferences data - settings should also be stored here
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putInt("hiscore", 99);
+        editor.putString("test", "preferences OK");
+        editor.commit();
+
+
+        // serialize
+        try {
+            File file = new File(getCacheDir(), "Thinkling");
+            ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(file));
+            os.writeObject(moveObjList);
+            os.close();
+
+            Toast.makeText(getBaseContext(), "onPause - OK", Toast.LENGTH_SHORT).show();
+        } catch (IOException ex){
+            Toast.makeText(getBaseContext(), "onPause - Fail", Toast.LENGTH_SHORT).show();
+            Log.d("onPause",ex.toString());
+        }
+    }
+
+    @Override
+    protected void onStart() {
+        super.onPause();
+        Toast.makeText(getBaseContext(), "onStart", Toast.LENGTH_SHORT).show();
+    }
+
+    // Sound pool builder - TODO should converge with constructor version
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     protected void createSoundPoolWithBuilder(){
         AudioAttributes attributes = new AudioAttributes.Builder()

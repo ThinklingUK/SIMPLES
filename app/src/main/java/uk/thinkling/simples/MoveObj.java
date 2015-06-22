@@ -4,29 +4,32 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 
+import java.io.ObjectInputStream;
+import java.io.Serializable;
 import java.util.Random;
 
 /**
  * SIMPLES
  * Created by ergo on 29/05/2015.
  */ /* Makes MoveObj Class */
-// Gives Variable Name And Type
+// Gives Variable Name And Type - NB: because we want to be able to save the state in a file (serializable)
+// some of the variables (object properties) are marked as transient and so will not get serialized - e.g. Paint
 
-public class MoveObj {
+public class MoveObj implements Serializable {
     int type;
     float x;
     float y;
     double xSpeed;  // if these are int, then the speed will gradually slow down due to rounding.
     double ySpeed;
     int radius;
-    int movingStreamID = 0;
+    transient int movingStreamID = 0;
     double mass;
     int state=1;
     float angle; // rotational angle of the object
     int attack; // power used in collisions
     int defense; // defence used in collisions
-    Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    static Paint stroke = new Paint(Paint.ANTI_ALIAS_FLAG);
+    transient Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    transient static Paint stroke = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     static Random rnd = new Random();
 
@@ -74,7 +77,7 @@ public class MoveObj {
         this(type, radius, rnd.nextInt(screenW - radius * 2) + radius, rnd.nextInt(screenH - radius * 2) + radius, rnd.nextInt(25) - 12, rnd.nextInt(25) - 12); // get a random integer from 0 to 9 for the 'type'
     }
 
-    // This is the type specific constructor - it sets radius to random values
+    // This is the type specific constructor - it sets radius to random values dependent on type
     public MoveObj(int type, int screenW, int screenH) {
         this(type, type==0?40:rnd.nextInt(40) + 10, screenW, screenH); // get a random integer for the radius
     }
@@ -83,7 +86,13 @@ public class MoveObj {
     public MoveObj(int screenW, int screenH) {
         this(rnd.nextInt(10), screenW, screenH); // get a random integer from 0 to 9 for the 'type'
     }
-
+/*
+    // this is used when de-serializing - can recreate Paint object from Colour
+    public void readObject(ObjectInputStream is) throws Exception {
+        is.defaultReadObject();
+        paint = new Collar();
+        c.size = is.readInt();
+    }*/
 
     public String toString() {
         return "MoveObj{" +
