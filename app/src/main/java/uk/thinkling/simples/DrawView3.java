@@ -11,7 +11,9 @@ import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.Toast;
 
+import java.io.*;
 import java.util.*;
 
 /**
@@ -30,10 +32,10 @@ public class DrawView3 extends View {
     int screenW, screenH, bedH, coinR, startZone;
     final float factor = 0.93f;
     final float bedSpace=0.8f; // NB: includes end space and free bed before first line.
-    final int beds=9, maxCoins=5;
-    int coinCount = 0;
-    int playerNum = 0;
-    int[][] score = new int[2][beds+1];
+    final int beds=9, maxCoins=5, bedScore=3;
+    int coinCount = -1;
+    int playerNum, winner = 0;
+    int[][] score = new int[2][beds+2]; // bed zero is for point score and final bed is for tracking completed
 
     MainActivity parent;
     private final GestureDetectorCompat gdc;
@@ -48,22 +50,14 @@ public class DrawView3 extends View {
     // this is the constructor - it is called when an instance of this class is created
     public DrawView3(Context context, AttributeSet attrs) {
         super(context, attrs);
-        parent = (MainActivity) this.getContext();
-        parent.moveObjList=objs; //give parent access to the list for serialization etc.
+        if (!isInEditMode()) parent = (MainActivity) this.getContext(); //TODO - remove all references to parent to improive editor preivew
         gdc = new GestureDetectorCompat(parent, new MyGestureListener()); // create the gesture detector
-        linepaint.setColor(Color.parseColor("#CD7F32"));
-        linepaint.setStyle(Paint.Style.STROKE);
-        linepaint.setStrokeWidth(3f); //TODO set based on screensize
-        linepaint.setTextSize(30);
-        outlinepaint.setColor(Color.parseColor("#FFFFFF"));
-        outlinepaint.setStyle(Paint.Style.STROKE);
-        outlinepaint.setStrokeWidth(3f);
         for (int f = 0; f<score.length; f++) score[0][f]=score[1][f]=0; //set scores to zero
 
     }
 
 
-    // this happens if the screen size changes - including the first timeit is measured. Here is where we get width and height
+    // this happens if the screen size changes - including the first time - it is measured. Here is where we get width and height
     @Override
     protected void onSizeChanged(int w, int h, int oldW, int oldH) {
         Log.d("onMeasure", w + " " + h);
@@ -74,10 +68,25 @@ public class DrawView3 extends View {
         startZone=(beds+2)*bedH+coinR;
         collider = new CollisionManager(w, h);
 
-        // create the first ball
-        inPlay = new MoveObj(11, coinR, screenW / 2, screenH - bedH, 5, 0);
-        objs.add(inPlay);
-        parent.player.play(parent.placeSound,1,1,1,0,1);
+        try {
+            restoreData();
+         } catch (Exception ex){
+            //could be FileNotFoundException, IOException, ClassNotFoundException
+            Log.d("deserialise",ex.toString());
+        }
+
+        float strokeSize = (w/360);
+        linepaint.setColor(Color.parseColor("#CD7F32"));
+        linepaint.setStyle(Paint.Style.STROKE);
+        linepaint.setStrokeWidth(strokeSize); //TODO set based on screensize
+        linepaint.setTextSize(30);
+        outlinepaint.setColor(Color.parseColor("#FFFFFF"));
+        outlinepaint.setStyle(Paint.Style.STROKE);
+        outlinepaint.setStrokeWidth(strokeSize);
+
+        parent.TimeLeftText.setText("");
+        parent.ScoreText.setText("");
+
     }
 
     /* BIT FOR TOUCHING! */
@@ -136,8 +145,11 @@ public class DrawView3 extends View {
             canvas.drawLine(0, f * bedH + 2*bedH, screenW, f * bedH + 2*bedH, linepaint);
             if (f<beds) {
                 canvas.drawText(""+(beds-f),screenW/2,f * bedH + 2.6f*bedH, linepaint);
-                canvas.drawText(""+score[0][beds-f],bedH/2,f * bedH + 2.6f*bedH, linepaint);
-                canvas.drawText(""+score[1][beds-f],screenW-bedH/2,f * bedH + 2.6f*bedH, linepaint);
+               // canvas.drawText(""+score[0][beds-f],bedH/2,f * bedH + 2.6f*bedH, linepaint);
+                drawScore(canvas, score[0][beds-f],0,f * bedH + 2*bedH);
+                drawScore(canvas, score[1][beds-f],screenW - bedH,f * bedH + 2*bedH);
+
+              //  canvas.drawText("" + score[1][beds - f], screenW - bedH / 2, f * bedH + 2.6f * bedH, linepaint);
             }
         }
         canvas.drawLine(bedH, 0, bedH, screenH, linepaint);
@@ -145,9 +157,15 @@ public class DrawView3 extends View {
 
 
         /*Score's Text*/
-        parent.HighScoreText.setText("Player "+ (playerNum+1));
-        parent.TimeLeftText.setText("P1: "+ score[0][0]);
-        parent.ScoreText.setText("P2: "+ score[1][0]);
+        parent.HighScoreText.setText("Player "+ (playerNum+1)+" turn "+(coinCount+1));
+       //Portsmouth scores
+       // parent.TimeLeftText.setText("P1: "+ score[0][0]);
+       // parent.ScoreText.setText("P2: "+ score[1][0]);
+
+        // bed counting
+        //parent.TimeLeftText.setText("P1: "+ score[0][beds+1]);
+        // parent.ScoreText.setText("P2: "+ score[1][beds+1]);
+
 
 
         // handle all the collisions starting at earliest time - if 2nd obj is null, then a wall collision
@@ -201,12 +219,12 @@ public class DrawView3 extends View {
 
         }
         // if ball in play exits the start zone, then it cannot be touched
-        if (inPlay.state != 0 && inPlay.y < startZone) inPlay.state = 0;
+        if (inPlay != null && inPlay.state != 0 && inPlay.y < startZone) inPlay.state = 0;
 
-        //if there is a ball in play and all motion stops, either new ball or return the ball if played short.
-        if (!motion && inPlay.state == 0) {
+        //if there is no ball, or a ball in play and all motion stops, play new ball.
+        if (inPlay == null || !motion &&  inPlay.state == 0) {
                 coinCount++;
-                // all coins played, so add score
+                // all coins played, so do scoring here.
                 if (coinCount>=maxCoins) {
                     i = objs.iterator();
                     while (i.hasNext()) {
@@ -214,28 +232,71 @@ public class DrawView3 extends View {
                         //if the coin is within a bed, highlight it. TODO - add a temporary score to the player
                         int bed = getBed((int)obj.y);
                         if (bed>0) {
-                            score[playerNum][0] += bed; //add the score onto player total
-                            //if already three, increment opponent up to three, else increment player
-                            if (score[playerNum][bed]>=3) score[1-playerNum][bed]+=score[1-playerNum][bed]<3?1:0;
-                            else score[playerNum][bed]++;
+                            score[playerNum][0] += bed; //add the score onto player total // used in portsmouth rules
+                            //if already three, increment opponent up to three, else increment player up to three
+                            switch (score[playerNum][bed]){
+                                case bedScore: // bed already full, so add on to opponent;
+                                    switch (score[1-playerNum][bed]){
+                                        case bedScore: break; // bed already full, so ignore;
+
+                                        case bedScore-1: // bed will be filled here - this does not apply in would-be-win situation
+                                            if (score[1-playerNum][beds+1]<beds-1) {
+                                                score[1-playerNum][bed]++;
+                                                score[1-playerNum][beds + 1]++;
+                                            }
+                                            break;
+
+                                        default: score[1-playerNum][bed]++;
+                                    }
+                                    break;
+
+                                case bedScore-1: // bed will be filled here - this could be winning situation
+                                    score[playerNum][bed]++;
+                                    score[playerNum][beds+1]++;
+                                    if (score[playerNum][beds+1]>=beds) {
+                                        //THIS IS A WIN !!!!! reset all
+                                        winner = playerNum + 1;
+                                    }
+                                    break;
+
+                                default: score[playerNum][bed]++;
+                            }
+
+                            // TODO would be good to have a "scoring" state where the coins and scores are animated
 
                         }
                     }
                     coinCount=0;
-                    playerNum=1-playerNum;
-                    objs.clear();
+                   objs.clear();
+                    if (winner>0){
+                        Toast.makeText(getContext(), "Won by Player "+winner, Toast.LENGTH_LONG).show();
+                        for (int f = 0; f <= beds+1; f++)
+                            score[0][f] = score[1][f] = 0; /*set scores to zero*/
+                            playerNum = 0;
+                    } else playerNum=1-playerNum;
 
-                    // TODO - if progressive then return some coins
+                    // TODO - if progressive (Oxford) then return some coins
                 }
 
-                // add a new coin
+                // add a new coin - this could be first coin
                 // TODO in combat mode we alternate playerNum
                 inPlay = new MoveObj(11 + playerNum, coinR, screenW / 2, screenH - bedH, 5, 0);
                 objs.add(inPlay);
-                parent.player.play(parent.placeSound,1,1,1,0,1);
+                    parent.player.play(parent.placeSound,1,1,1,0,1);
         }
 
         // TODO display potential scores
+
+
+    }
+
+    private void drawScore(Canvas c,int score, float x, float y){
+
+        int div = bedH/bedScore; // this splits the verts
+        for (int i = Math.min(score,bedScore-1); i>0; i--) {
+            c.drawLine(x + i * div*01.1f, y + bedH * 0.2f, x + i * div * 0.9f, y + bedH * 0.8f, linepaint);
+        }
+        if (score == bedScore) c.drawLine(x + bedH*0.15f, y + bedH * 0.45f, x+bedH*0.85f, y + bedH * 0.55f, linepaint);
 
 
     }
@@ -245,6 +306,37 @@ public class DrawView3 extends View {
         if ((pos+coinR)< 2*bedH) return 0; // in the endzone
         if ((pos-coinR)%bedH>coinR) return 0; //overlapping. so no score
         return (beds+2-((pos-coinR)/bedH));
+    }
+
+
+
+    // TODO - pull in the cache here - rather than the onStart()
+    public void saveData() throws IOException {
+        File file = new File(getContext().getCacheDir(), "moveObjs");
+        ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(file));
+        os.writeObject(objs);
+        os.close();
+        file = new File(getContext().getCacheDir(), "Scores");
+        os = new ObjectOutputStream(new FileOutputStream(file));
+        os.writeObject(score);
+        os.close();
+        Log.d("serialize onPause",objs.toString());
+    }
+
+    // TODO - pull in the cache here - rather than the onStart()
+    public void restoreData() throws IOException,ClassNotFoundException {
+        File file = new File(getContext().getCacheDir(), "moveObjs");
+        ObjectInputStream is = new ObjectInputStream(new FileInputStream(file));
+        objs = (ArrayList) is.readObject();
+        coinCount = objs.size()-1;
+        if (coinCount >= 0) {
+            inPlay = objs.get(coinCount);
+            playerNum=inPlay.type-11;
+        }
+        file = new File(getContext().getCacheDir(), "Scores");
+        is = new ObjectInputStream(new FileInputStream(file));
+        score= (int[][]) is.readObject();
+        Log.d("deserialise", objs.toString());
     }
 }
 

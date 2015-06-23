@@ -3,8 +3,11 @@ package uk.thinkling.simples;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.util.Log;
 
+import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.Random;
 
@@ -86,13 +89,20 @@ public class MoveObj implements Serializable {
     public MoveObj(int screenW, int screenH) {
         this(rnd.nextInt(10), screenW, screenH); // get a random integer from 0 to 9 for the 'type'
     }
-/*
+
+    // this is used when serializing - can store Colour Int from Paint object
+    private void writeObject(ObjectOutputStream out)throws IOException {
+        out.defaultWriteObject();
+        out.writeObject(paint.getColor());
+    }
+
     // this is used when de-serializing - can recreate Paint object from Colour
-    public void readObject(ObjectInputStream is) throws Exception {
-        is.defaultReadObject();
-        paint = new Collar();
-        c.size = is.readInt();
-    }*/
+    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+        in.defaultReadObject();
+        paint = new Paint();
+        paint.setColor((int) in.readObject());
+        Log.d("deserialize", this.toString());
+    }
 
     public String toString() {
         return "MoveObj{" +

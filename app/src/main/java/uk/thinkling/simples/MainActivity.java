@@ -37,9 +37,6 @@ public class MainActivity extends ActionBarActivity {
     ViewGroup parent;
     int index;
 
-    List<MoveObj> moveObjList;
-
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,6 +73,29 @@ public class MainActivity extends ActionBarActivity {
 
 
     @Override
+    protected void onPause() {
+        super.onPause();
+
+        // Save application preferences data - settings should also be stored here
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putInt("hiscore", 99);
+        editor.putString("test", "preferences OK");
+        editor.commit();
+
+        if (myDrawView instanceof DrawView3) {
+            // serialize
+            try {
+                ((DrawView3) myDrawView).saveData();
+                Toast.makeText(getBaseContext(), "onPause - OK", Toast.LENGTH_SHORT).show();
+            } catch (IOException ex) {
+                Toast.makeText(getBaseContext(), "onPause - Fail", Toast.LENGTH_SHORT).show();
+                Log.d("onPause", ex.toString());
+            }
+        }
+    }
+
+    @Override
     protected void onStop() {
         super.onStop();
     }
@@ -83,6 +103,13 @@ public class MainActivity extends ActionBarActivity {
     @Override
     protected void onResume() {
         super.onResume();
+    }
+
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        Toast.makeText(getBaseContext(), "onStart", Toast.LENGTH_SHORT).show();
         String test ="";
         try {
             //Load lists from file or set defaults for some reason, | is not good delimiter
@@ -96,52 +123,6 @@ public class MainActivity extends ActionBarActivity {
         Toast.makeText(this, test, Toast.LENGTH_SHORT).show();
 
 
-        try {
-            File file = new File(getCacheDir(), "Thinkling");
-            ObjectInputStream is = new ObjectInputStream(new FileInputStream(file));
-            ArrayList newAL;
-            newAL = (ArrayList) is.readObject();
-            System.out.println(newAL);
-            moveObjList=newAL;
-            Toast.makeText(getBaseContext(), "onResume - OK", Toast.LENGTH_SHORT).show();
-        } catch (Exception ex){
-            //could be FileNotFoundException, IOException, ClassNotFoundException
-            Toast.makeText(getBaseContext(), "onResume - FAIL", Toast.LENGTH_SHORT).show();
-
-        }
-    }
-
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-
-        // Save application preferences data - settings should also be stored here
-        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-        SharedPreferences.Editor editor = preferences.edit();
-        editor.putInt("hiscore", 99);
-        editor.putString("test", "preferences OK");
-        editor.commit();
-
-
-        // serialize
-        try {
-            File file = new File(getCacheDir(), "Thinkling");
-            ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(file));
-            os.writeObject(moveObjList);
-            os.close();
-
-            Toast.makeText(getBaseContext(), "onPause - OK", Toast.LENGTH_SHORT).show();
-        } catch (IOException ex){
-            Toast.makeText(getBaseContext(), "onPause - Fail", Toast.LENGTH_SHORT).show();
-            Log.d("onPause",ex.toString());
-        }
-    }
-
-    @Override
-    protected void onStart() {
-        super.onPause();
-        Toast.makeText(getBaseContext(), "onStart", Toast.LENGTH_SHORT).show();
     }
 
     // Sound pool builder - TODO should converge with constructor version
@@ -193,6 +174,10 @@ public class MainActivity extends ActionBarActivity {
         switch (item.getItemId()){
 
             case R.id.action_settings:
+                File file = new File(getCacheDir(), "moveObjs");
+                if (file.exists()) file.delete();
+                file = new File(getCacheDir(), "Scores");
+                if (file.exists()) file.delete();
                 return true;
 
             case R.id.action_start1:
