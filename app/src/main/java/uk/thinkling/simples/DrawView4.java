@@ -73,7 +73,7 @@ public class DrawView4 extends View {
                 } else {
                     gameState = 1;
                     objs.clear();
-                    objs.add(new MoveObj(100, 40, screenW, screenH));
+                    objs.add(new MoveObj(100, screenW/15, screenW, screenH));
                     player1 = objs.get(0);
                     for (int bCount = 1; bCount < balls; bCount++) objs.add(new MoveObj(screenW, screenH));
                     objs.add(new MoveObj(0, screenW, screenH)); //make sure at least one white ball

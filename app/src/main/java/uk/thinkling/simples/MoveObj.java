@@ -82,7 +82,7 @@ public class MoveObj implements Serializable {
 
     // This is the type specific constructor - it sets radius to random values dependent on type
     public MoveObj(int type, int screenW, int screenH) {
-        this(type, type==0?40:rnd.nextInt(40) + 10, screenW, screenH); // get a random integer for the radius
+        this(type, type==0?screenW/15:rnd.nextInt(screenW/15) + screenW/50, screenW, screenH); // get a random integer for the radius
     }
 
     // This is the default constructor - it sets the type to random values

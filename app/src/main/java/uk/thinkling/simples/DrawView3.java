@@ -30,7 +30,7 @@ public class DrawView3 extends View {
     CollisionManager collider;
 
     int screenW, screenH, bedH, coinR, startZone;
-    final float factor = 0.93f;
+    final float factor = 0.93f, coinRatio = 0.33f; //friction and bed to radius factor (0.33 is 2 thirds,
     final float bedSpace=0.8f; // NB: includes end space and free bed before first line.
     final int beds=9, maxCoins=5, bedScore=3;
     int coinCount = -1;
@@ -50,7 +50,8 @@ public class DrawView3 extends View {
     // this is the constructor - it is called when an instance of this class is created
     public DrawView3(Context context, AttributeSet attrs) {
         super(context, attrs);
-        if (!isInEditMode()) parent = (MainActivity) this.getContext(); //TODO - remove all references to parent to improive editor preivew
+        //if (!isInEditMode()) ;
+        parent = (MainActivity) this.getContext(); //TODO - remove all references to parent to improve editor preivew
         gdc = new GestureDetectorCompat(parent, new MyGestureListener()); // create the gesture detector
         for (int f = 0; f<score.length; f++) score[0][f]=score[1][f]=0; //set scores to zero
 
@@ -64,7 +65,7 @@ public class DrawView3 extends View {
         screenW = w;
         screenH = h;
         bedH = Math.round(h*bedSpace/(beds+3)); //2 extra beds for end and free space after flickzone
-        coinR=bedH/3;
+        coinR=Math.round(bedH*coinRatio);
         startZone=(beds+2)*bedH+coinR;
         collider = new CollisionManager(w, h);
 
@@ -75,14 +76,20 @@ public class DrawView3 extends View {
             Log.d("deserialise",ex.toString());
         }
 
-        float strokeSize = (w/360);
+        float strokeSize = (w/180);
         linepaint.setColor(Color.parseColor("#CD7F32"));
         linepaint.setStyle(Paint.Style.STROKE);
         linepaint.setStrokeWidth(strokeSize); //TODO set based on screensize
         linepaint.setTextSize(30);
+        linepaint.setDither(true);                    // set the dither to true
+        linepaint.setStyle(Paint.Style.STROKE);       // set to STOKE
+        //linepaint.setStrokeJoin(Paint.Join.ROUND);    // set the join to round you want
+        linepaint.setStrokeCap(Paint.Cap.ROUND);      // set the paint cap to round too
+       // linepaint.setPathEffect(new CornerPathEffect(10) );   // set the path effect when they join.
+        linepaint.setAntiAlias(true);
+        outlinepaint.set(linepaint);
         outlinepaint.setColor(Color.parseColor("#FFFFFF"));
-        outlinepaint.setStyle(Paint.Style.STROKE);
-        outlinepaint.setStrokeWidth(strokeSize);
+
 
         parent.TimeLeftText.setText("");
         parent.ScoreText.setText("");
@@ -294,9 +301,9 @@ public class DrawView3 extends View {
 
         int div = bedH/bedScore; // this splits the verts
         for (int i = Math.min(score,bedScore-1); i>0; i--) {
-            c.drawLine(x + i * div*01.1f, y + bedH * 0.2f, x + i * div * 0.9f, y + bedH * 0.8f, linepaint);
+            c.drawLine(x + i * div*01.1f, y + bedH * 0.2f, x + i * div * 0.9f, y + bedH * 0.8f, outlinepaint);
         }
-        if (score == bedScore) c.drawLine(x + bedH*0.15f, y + bedH * 0.45f, x+bedH*0.85f, y + bedH * 0.55f, linepaint);
+        if (score == bedScore) c.drawLine(x + bedH*0.15f, y + bedH * 0.45f, x+bedH*0.85f, y + bedH * 0.55f, outlinepaint);
 
 
     }
