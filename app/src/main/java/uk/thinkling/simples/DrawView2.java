@@ -9,8 +9,6 @@ import android.view.MotionEvent;
 import android.view.View;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -25,6 +23,7 @@ public class DrawView2 extends View {
     MoveObj player1;
     List<MoveObj> objs = new ArrayList<>();
     final int balls = 25;
+    final double gravity = 1, friction = 0;
 
     CollisionManager collider;
 
@@ -54,7 +53,7 @@ public class DrawView2 extends View {
         screenW = w;
         screenH = h;
 
-        collider = new CollisionManager(w, h);
+        collider = new CollisionManager(w, h, friction, gravity);
 
         // initialise the objs array by creating a new MoveObj object for each entry in the array
         // TODO - maybe only do this if null
@@ -111,7 +110,9 @@ public class DrawView2 extends View {
             if (coll.obja.type == 100 && coll.objb.type == 0) score++;
         }
 
-        for (MoveObj obj : objs) obj.draw(canvas);
+        for (MoveObj obj : objs) {
+            obj.draw(canvas);
+        }
 
      }
 }

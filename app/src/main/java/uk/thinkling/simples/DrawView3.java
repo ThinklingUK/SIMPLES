@@ -1,9 +1,7 @@
 package uk.thinkling.simples;
 
 import android.content.Context;
-import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.Paint;
+import android.graphics.*;
 import android.support.annotation.NonNull;
 import android.support.v4.view.GestureDetectorCompat;
 import android.util.AttributeSet;
@@ -30,7 +28,8 @@ public class DrawView3 extends View {
     CollisionManager collider;
 
     int screenW, screenH, bedH, coinR, startZone;
-    final float factor = 0.93f, coinRatio = 0.33f; //friction and bed to radius factor (0.33 is 2 thirds,
+    final double gravity = 0, friction = 0.07;
+    final float coinRatio = 0.33f; // bed to radius friction (0.33 is 2 thirds,
     final float bedSpace=0.8f; // NB: includes end space and free bed before first line.
     final int beds=9, maxCoins=5, bedScore=3;
     int coinCount = -1;
@@ -42,6 +41,10 @@ public class DrawView3 extends View {
 
     static Paint linepaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     static Paint outlinepaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    Paint bmppaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+    static Bitmap rawbmp, bmp; // bitmap for the coin
+    Matrix matrix = new Matrix(); //matrix for bitmap
 
 
     /*VARIABLES*/
@@ -54,7 +57,6 @@ public class DrawView3 extends View {
         parent = (MainActivity) this.getContext(); //TODO - remove all references to parent to improve editor preivew
         gdc = new GestureDetectorCompat(parent, new MyGestureListener()); // create the gesture detector
         for (int f = 0; f<score.length; f++) score[0][f]=score[1][f]=0; //set scores to zero
-
     }
 
 
@@ -67,7 +69,7 @@ public class DrawView3 extends View {
         bedH = Math.round(h*bedSpace/(beds+3)); //2 extra beds for end and free space after flickzone
         coinR=Math.round(bedH*coinRatio);
         startZone=(beds+2)*bedH+coinR;
-        collider = new CollisionManager(w, h);
+        collider = new CollisionManager(w, h, friction, gravity);
 
         try {
             restoreData();
@@ -94,6 +96,9 @@ public class DrawView3 extends View {
         parent.TimeLeftText.setText("");
         parent.ScoreText.setText("");
 
+        rawbmp = BitmapFactory.decodeResource(getResources(), R.drawable.coin67);
+        bmp = Bitmap.createScaledBitmap(rawbmp, coinR * 2, coinR * 2, true);
+        bmppaint.setFilterBitmap(true);
     }
 
     /* BIT FOR TOUCHING! */
@@ -133,6 +138,7 @@ public class DrawView3 extends View {
             if (inPlay.state == 1 && e2.getY()>startZone) {
                 inPlay.xSpeed = velocityX / 25;
                 inPlay.ySpeed = velocityY / 25;
+                inPlay.rSpeed = Math.random()*20-10;
             }
             return true;
         }
@@ -198,10 +204,16 @@ public class DrawView3 extends View {
         while (i.hasNext()) {
             MoveObj obj = i.next(); // must be called before you can call i.remove()
             obj.draw(canvas);
+            matrix.reset();
+            matrix.postTranslate(-coinR, -coinR);
+            matrix.postRotate(obj.angle);
+            matrix.postTranslate((float) obj.x, (float) obj.y);
+
+            canvas.drawBitmap(bmp, matrix, bmppaint);
+
             //if the coin is within a bed, highlight it. TODO - add a temporary score to the player
             if (getBed((int)obj.y)>0)
-                canvas.drawCircle(obj.x, obj.y, obj.radius, outlinepaint);
-            obj.applyFrictionGravity(factor, 0);
+                canvas.drawCircle((float)obj.x, (float)obj.y, obj.radius, outlinepaint);
             if (obj.xSpeed != 0 || obj.ySpeed != 0) {
                 motion = true;
                 // if there is a streamID then adjust volume else start movement sound

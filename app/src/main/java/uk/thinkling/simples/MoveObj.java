@@ -20,15 +20,16 @@ import java.util.Random;
 
 public class MoveObj implements Serializable {
     int type;
-    float x;
-    float y;
+    double x;
+    double y;
     double xSpeed;  // if these are int, then the speed will gradually slow down due to rounding.
     double ySpeed;
+    double rSpeed; //rotational speed
     int radius;
     transient int movingStreamID = 0;
     double mass;
-    int state=1;
-    float angle; // rotational angle of the object
+    int state = 1;
+    float angle = 0; // rotational angle of the object
     int attack; // power used in collisions
     int defense; // defence used in collisions
     transient Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -82,7 +83,7 @@ public class MoveObj implements Serializable {
 
     // This is the type specific constructor - it sets radius to random values dependent on type
     public MoveObj(int type, int screenW, int screenH) {
-        this(type, type==0?screenW/15:rnd.nextInt(screenW/15) + screenW/50, screenW, screenH); // get a random integer for the radius
+        this(type, type==0?screenW/20:rnd.nextInt(screenW/30) + screenW/60, screenW, screenH); // get a random integer for the radius
     }
 
     // This is the default constructor - it sets the type to random values
@@ -124,37 +125,36 @@ public class MoveObj implements Serializable {
                 break;*/
 
             case 100:
-                canvas.drawCircle(x, y, radius, paint);
-                canvas.drawCircle(x, y, radius, stroke);
-                canvas.drawCircle(x + radius / 3, y - radius / 3, radius / 4, stroke);
-                canvas.drawCircle(x - radius / 3, y - radius / 3, radius / 4, stroke);
+                canvas.drawCircle((float)x, (float)y, radius, paint);
+                canvas.drawCircle((float)x, (float)y, radius, stroke);
+                canvas.drawCircle((float)x + radius / 3, (float)y - radius / 3, radius / 4, stroke);
+                canvas.drawCircle((float)x - radius / 3, (float)y - radius / 3, radius / 4, stroke);
                 break;
 
             default:
-                canvas.drawCircle(x, y, radius, paint);
+                canvas.drawCircle((float) x, (float) y, radius, paint);
+                double radians = Math.toRadians(angle);
+                canvas.drawLine((float)x, (float)y, (float)(x + radius* Math.cos(radians)), (float)(y + radius* Math.sin(radians)), paint);
         }
     }
 
-    public void applyFrictionGravity(double factor, double gravity) {
+    public void applyFrictionGravity(double friction, double gravity, double rFriction) {
 
-        // slow the object based on factor
-        xSpeed*=factor;
-        ySpeed*=factor;
-        if (Math.abs(xSpeed)<0.1f) xSpeed=0;
-        if (Math.abs(ySpeed)<0.1f) ySpeed=0;
-        ySpeed+=gravity;
+        // slow the object based on friction and accelerate down based on gravity
+        xSpeed *= 1 - friction;
+        ySpeed *= 1 - friction;
+        rSpeed *= 1 - friction;
+        ySpeed += gravity;
 
+        if (Math.abs(xSpeed) < 0.1 && Math.abs(ySpeed) < 0.1) xSpeed = ySpeed = 0;
+        // NB: TODO gravity may be cancelled out before it can build esp if friction and gravity used
     }
 
-    public void move(int screenW, int screenH, double time) {
-
+    public void move(double time) {
         // move the object based on speed
         x += xSpeed*time;
         y += ySpeed*time;
-
-        x=Math.max(radius, Math.min(x, screenW - radius));
-        y=Math.max(radius,Math.min(y,screenH-radius));
-
+        angle += rSpeed*time;
     }
 }
 

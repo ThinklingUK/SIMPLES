@@ -53,7 +53,7 @@ public class DrawView4 extends View {
         Log.d("onMeasure", w + " "+ h);
         screenW = w;
         screenH = h;
-        collider = new CollisionManager(w,h);
+        collider = new CollisionManager(w,h, 0, 0);
         // initialise the objs array by creating a new MoveObj object for each entry in the array
     }
 
@@ -128,7 +128,6 @@ public class DrawView4 extends View {
                 MoveObj obj = i.next(); // must be called before you can call i.remove()
                 balls_left += (obj.type == 0) ? 0 : 1;
                 obj.draw(canvas);
-                obj.applyFrictionGravity(0.985f, 0f);
                 if (obj.state == 0) obj.radius -= 1;
                 if (obj.radius == 0) {
                     i.remove();
