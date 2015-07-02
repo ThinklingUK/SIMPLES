@@ -3,6 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools" tools:context=".MainActivity">
     <item android:id="@+id/action_settings" android:title="@string/action_settings"
           android:orderInCategory="100" app:showAsAction="never"/>
+    <item android:id="@+id/action_clearcache" android:title="Clear Cache"
+          android:orderInCategory="100" app:showAsAction="never"/>
     <item android:id="@+id/action_start1" android:title="Don't Touch"
           android:orderInCategory="100" app:showAsAction="never"/>
     <item android:id="@+id/action_start2" android:title="Do touch"

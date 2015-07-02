@@ -1,6 +1,7 @@
 package uk.thinkling.simples;
 
 import android.annotation.TargetApi;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.media.AudioAttributes;
 import android.media.AudioManager;
@@ -67,7 +68,7 @@ public class MainActivity extends ActionBarActivity {
         }
         clinkSound = player.load(this, R.raw.clink, 1);
         clunkSound = player.load(this, R.raw.clunk, 1);
-        placeSound = player.load(this, R.raw.place, 1);
+        placeSound = player.load(this, R.raw.plonk, 1);
         slideSound = player.load(this, R.raw.slide, 1);
     }
 
@@ -77,11 +78,11 @@ public class MainActivity extends ActionBarActivity {
         super.onPause();
 
         // Save application preferences data - settings should also be stored here
-        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+/*        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         SharedPreferences.Editor editor = preferences.edit();
         editor.putInt("hiscore", 99);
         editor.putString("test", "preferences OK");
-        editor.commit();
+        editor.commit();*/
 
         if (myDrawView instanceof DrawView3) {
             // serialize
@@ -109,7 +110,8 @@ public class MainActivity extends ActionBarActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        Toast.makeText(getBaseContext(), "onStart", Toast.LENGTH_SHORT).show();
+        //all of this is in the getsizechange of draqview
+/*        Toast.makeText(getBaseContext(), "onStart", Toast.LENGTH_SHORT).show();
         String test ="";
         try {
             //Load lists from file or set defaults for some reason, | is not good delimiter
@@ -120,7 +122,7 @@ public class MainActivity extends ActionBarActivity {
         } catch (Exception e){
             Log.d("LOADING LIST",  e.getMessage());
         }
-        Toast.makeText(this, test, Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, test, Toast.LENGTH_SHORT).show();*/
 
 
     }
@@ -169,11 +171,15 @@ public class MainActivity extends ActionBarActivity {
         // Handle action bar item clicks here. The action bar will
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
-        parent.removeView(myDrawView);
 
         switch (item.getItemId()){
 
             case R.id.action_settings:
+                Intent intent = new Intent(this, SettingsActivity.class);
+                startActivity(intent); //TODO should really startActivitywithResult and capture here ...
+                return true;
+
+            case R.id.action_clearcache:
                 File file = new File(getCacheDir(), "moveObjs");
                 if (file.exists()) file.delete();
                 file = new File(getCacheDir(), "Scores");
@@ -181,18 +187,22 @@ public class MainActivity extends ActionBarActivity {
                 return true;
 
             case R.id.action_start1:
+                parent.removeView(myDrawView);
                 myDrawView = new DrawView(this , null);
                 break;
 
             case R.id.action_start2:
+                parent.removeView(myDrawView);
                 myDrawView = new DrawView2(this , null);
                 break;
 
             case R.id.action_start3:
+                parent.removeView(myDrawView);
                 myDrawView = new DrawView3(this , null);
                 break;
 
             case R.id.action_start4:
+                parent.removeView(myDrawView);
                 myDrawView = new DrawView4(this , null);
                 break;
 

@@ -131,6 +131,11 @@ public class MoveObj implements Serializable {
                 canvas.drawCircle((float)x - radius / 3, (float)y - radius / 3, radius / 4, stroke);
                 break;
 
+            case 11:
+            case 12:
+                //special case for shove hapenny - drawign is done in DrawView with bitmaps
+                break;
+
             default:
                 canvas.drawCircle((float) x, (float) y, radius, paint);
                 double radians = Math.toRadians(angle);

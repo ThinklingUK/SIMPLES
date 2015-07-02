@@ -1,0 +1,57 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <PreferenceCategory
+            android:title="Player Settings"
+            android:key="pref_player_settings">
+
+        <EditTextPreference
+                android:key="pref_player1"
+                android:title="Player 1"
+                android:summary="Define the player 1 name to be shown"
+                android:dialogTitle="Player 1 name"
+                android:dialogMessage="Provide a name"
+                android:defaultValue="PLayer 1" />
+        <EditTextPreference
+                android:key="pref_player2"
+                android:title="Player 2"
+                android:summary="Define the player 2 name to be shown"
+                android:dialogTitle="Player 2 name"
+                android:dialogMessage="Provide a name"
+                android:defaultValue="Player 2" />
+    </PreferenceCategory>
+    <PreferenceCategory
+            android:title="Game Settings"
+            android:key="pref_game_settings">
+
+        <SwitchPreference
+                android:key="pref_rebounds"
+                android:summaryOff="Can bounce off sides"
+                android:summaryOn="No bouncing off sides"
+                android:switchTextOff="OFF"
+                android:switchTextOn="ON"
+                android:title="Rebounds"
+                android:defaultValue="true"/>
+
+        <CheckBoxPreference
+                android:key="pref_bounds"
+                android:title="Boundary Rules"
+                android:summary="Allow coins to cross boundaries"
+                android:defaultValue="true" />
+
+        <CheckBoxPreference
+                android:key="pref_progressive"
+                android:title="Oxford (Progressive)"
+                android:summary="Re-play any scoring coins"
+                android:enabled="false"
+                android:defaultValue="false" />
+
+        <CheckBoxPreference
+                android:key="pref_pointscore"
+                android:title="Shanghai (Scoring)"
+                android:summary="Scoring vesrion - no limt to beds"
+                android:enabled="false"
+                android:defaultValue="false" />
+
+
+    </PreferenceCategory>
+</PreferenceScreen>

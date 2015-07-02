@@ -1,7 +1,9 @@
 package uk.thinkling.simples;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.*;
+import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.v4.view.GestureDetectorCompat;
 import android.util.AttributeSet;
@@ -31,10 +33,12 @@ public class DrawView3 extends View {
     final double gravity = 0, friction = 0.07;
     final float coinRatio = 0.33f; // bed to radius friction (0.33 is 2 thirds,
     final float bedSpace=0.8f; // NB: includes end space and free bed before first line.
-    final int beds=9, maxCoins=5, bedScore=3;
+    int beds=9, maxCoins=5, bedScore=3;
     int coinCount = -1;
     int playerNum, winner = 0;
     int[][] score = new int[2][beds+2]; // bed zero is for point score and final bed is for tracking completed
+    String[] pName = new String[2];
+    boolean bounds=true, rebounds=true;
 
     MainActivity parent;
     private final GestureDetectorCompat gdc;
@@ -66,6 +70,25 @@ public class DrawView3 extends View {
         Log.d("onMeasure", w + " " + h);
         screenW = w;
         screenH = h;
+
+        try {
+            //Load lists from file or set defaults TODO set defaults as consts
+            SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getContext());
+            pName[0] = preferences.getString("pref_player1", "Player 1");
+            pName[1] = preferences.getString("pref_player2", "Player 2");
+
+            bounds = preferences.getBoolean("pref_bounds", true);
+            rebounds = preferences.getBoolean("pref_rebounds", true);
+
+            beds = Integer.parseInt(preferences.getString("pref_beds", "9"));
+            maxCoins = Integer.parseInt(preferences.getString("pref_maxCoins", "5"));
+            bedScore = Integer.parseInt(preferences.getString("pref_bedscore", "3"));
+
+        } catch (Exception e){
+            Log.d("LOADING PREFS",  e.getMessage());
+        }
+
+
         bedH = Math.round(h*bedSpace/(beds+3)); //2 extra beds for end and free space after flickzone
         coinR=Math.round(bedH*coinRatio);
         startZone=(beds+2)*bedH+coinR;
@@ -77,6 +100,10 @@ public class DrawView3 extends View {
             //could be FileNotFoundException, IOException, ClassNotFoundException
             Log.d("deserialise",ex.toString());
         }
+
+        //TODO - if beds changed, then stored object radius may be inaccurate
+        //TODO if #beds changed (ie. in prefs) and mismatch with saved data, reset score data
+        if (score.length!=beds+2) score = new int[2][beds+2];
 
         float strokeSize = (w/180);
         linepaint.setColor(Color.parseColor("#CD7F32"));
@@ -170,7 +197,7 @@ public class DrawView3 extends View {
 
 
         /*Score's Text*/
-        parent.HighScoreText.setText("Player "+ (playerNum+1)+" turn "+(coinCount+1));
+        parent.HighScoreText.setText(pName[playerNum] + " turn " + (coinCount+1));
        //Portsmouth scores
        // parent.TimeLeftText.setText("P1: "+ score[0][0]);
        // parent.ScoreText.setText("P2: "+ score[1][0]);
@@ -213,7 +240,7 @@ public class DrawView3 extends View {
 
             //if the coin is within a bed, highlight it. TODO - add a temporary score to the player
             if (getBed((int)obj.y)>0)
-                canvas.drawCircle((float)obj.x, (float)obj.y, obj.radius, outlinepaint);
+                canvas.drawCircle((float)obj.x, (float)obj.y, coinR, outlinepaint);
             if (obj.xSpeed != 0 || obj.ySpeed != 0) {
                 motion = true;
                 // if there is a streamID then adjust volume else start movement sound
@@ -253,34 +280,9 @@ public class DrawView3 extends View {
                         if (bed>0) {
                             score[playerNum][0] += bed; //add the score onto player total // used in portsmouth rules
                             //if already three, increment opponent up to three, else increment player up to three
-                            switch (score[playerNum][bed]){
-                                case bedScore: // bed already full, so add on to opponent;
-                                    switch (score[1-playerNum][bed]){
-                                        case bedScore: break; // bed already full, so ignore;
-
-                                        case bedScore-1: // bed will be filled here - this does not apply in would-be-win situation
-                                            if (score[1-playerNum][beds+1]<beds-1) {
-                                                score[1-playerNum][bed]++;
-                                                score[1-playerNum][beds + 1]++;
-                                            }
-                                            break;
-
-                                        default: score[1-playerNum][bed]++;
-                                    }
-                                    break;
-
-                                case bedScore-1: // bed will be filled here - this could be winning situation
-                                    score[playerNum][bed]++;
-                                    score[playerNum][beds+1]++;
-                                    if (score[playerNum][beds+1]>=beds) {
-                                        //THIS IS A WIN !!!!! reset all
-                                        winner = playerNum + 1;
-                                    }
-                                    break;
-
-                                default: score[playerNum][bed]++;
-                            }
-
+                            if (!addPoint(playerNum, bed, true)) addPoint(1-playerNum,bed,false);
+                            if (score[playerNum][beds+1]>=beds) winner = playerNum + 1;
+                            //THIS IS A WIN !!!!! reset all
                             // TODO would be good to have a "scoring" state where the coins and scores are animated
 
                         }
@@ -288,9 +290,9 @@ public class DrawView3 extends View {
                     coinCount=0;
                    objs.clear();
                     if (winner>0){
-                        Toast.makeText(getContext(), "Won by Player "+winner, Toast.LENGTH_LONG).show();
-                        for (int f = 0; f <= beds+1; f++)
-                            score[0][f] = score[1][f] = 0; /*set scores to zero*/
+                        Toast.makeText(getContext(), "Won by "+pName[winner], Toast.LENGTH_LONG).show();
+                        for (int f = 0; f <= score.length; f++)
+                            score[0][f] = score[1][f] = 0; /* set scores to zero */
                             playerNum = 0;
                     } else playerNum=1-playerNum;
 
@@ -325,6 +327,24 @@ public class DrawView3 extends View {
         if ((pos+coinR)< 2*bedH) return 0; // in the endzone
         if ((pos-coinR)%bedH>coinR) return 0; //overlapping. so no score
         return (beds+2-((pos-coinR)/bedH));
+    }
+
+    private boolean addPoint(int player, int bed, boolean scorer){
+        // if the bed is full cannot add so return false - point may go to opponent
+        if (score[player][bed] == bedScore) return false;
+
+        // if the bed will not get filled then add
+        if (score[player][bed] < bedScore-1){
+            score[player][bed]++;
+            return true;
+        }
+
+        // remaining case is that a bed will bet filled. This cannot be allowed if a non-scorer would win.
+        if (!scorer && score[player][beds + 1] >= beds - 1) return false;
+
+        score[player][bed]++;
+        score[player][beds + 1]++;
+        return true;
     }
 
 
