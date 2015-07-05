@@ -110,7 +110,7 @@ public class MainActivity extends ActionBarActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        //all of this is in the getsizechange of draqview
+        //all of this is in the getsizechange of drawView
 /*        Toast.makeText(getBaseContext(), "onStart", Toast.LENGTH_SHORT).show();
         String test ="";
         try {

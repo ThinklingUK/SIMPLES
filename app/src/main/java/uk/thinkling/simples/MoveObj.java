@@ -29,6 +29,7 @@ public class MoveObj implements Serializable {
     transient int movingStreamID = 0;
     double mass;
     int state = 1;
+    boolean wallBounce = true;
     float angle = 0; // rotational angle of the object
     int attack; // power used in collisions
     int defense; // defence used in collisions
@@ -53,12 +54,11 @@ public class MoveObj implements Serializable {
                 paint.setStrokeWidth(5f);
                 break;
 
-            case 11:  //red ball
-                paint.setColor(Color.parseColor("#c0c0c0"));
-                break;
-
-            case 12: //blue ball
-                paint.setColor(Color.parseColor("#c5b358"));
+            case 11: //p1 ball
+            case 12: //p2 ball
+                paint.setColor(Color.parseColor("#ff0000"));
+                paint.setStyle(Paint.Style.STROKE);
+                paint.setStrokeWidth(2f);
                 break;
 
             case 100: //hero ball
@@ -131,10 +131,11 @@ public class MoveObj implements Serializable {
                 canvas.drawCircle((float)x - radius / 3, (float)y - radius / 3, radius / 4, stroke);
                 break;
 
-            case 11:
+/*          case 11:
             case 12:
-                //special case for shove hapenny - drawign is done in DrawView with bitmaps
+                //special case for shove hapenny - drawign is done in DrawView with bitmaps should hold bitmap ref within obj
                 break;
+                */
 
             default:
                 canvas.drawCircle((float) x, (float) y, radius, paint);
@@ -143,7 +144,7 @@ public class MoveObj implements Serializable {
         }
     }
 
-    public void applyFrictionGravity(double friction, double gravity, double rFriction) {
+    public void applyFrictionGravity(double friction, double gravity, double rFriction, int screenW, int screenH) {
 
         // slow the object based on friction and accelerate down based on gravity
         xSpeed *= 1 - friction;
@@ -152,6 +153,10 @@ public class MoveObj implements Serializable {
         ySpeed += gravity;
 
         if (Math.abs(xSpeed) < 0.1 && Math.abs(ySpeed) < 0.1) xSpeed = ySpeed = 0;
+
+        // also zero speed if out of bounds
+        if (x < -radius || x>screenW+radius || y < - radius || y > screenH+radius) xSpeed = ySpeed = 0;
+
         // NB: TODO gravity may be cancelled out before it can build esp if friction and gravity used
     }
 

@@ -34,11 +34,11 @@ public class DrawView3 extends View {
     final float coinRatio = 0.33f; // bed to radius friction (0.33 is 2 thirds,
     final float bedSpace=0.8f; // NB: includes end space and free bed before first line.
     int beds=9, maxCoins=5, bedScore=3;
-    int coinCount = -1;
-    int playerNum, winner = 0;
+    int coinCount= -1, winner = -1;
+    int playerNum = 0;
     int[][] score = new int[2][beds+2]; // bed zero is for point score and final bed is for tracking completed
     String[] pName = new String[2];
-    boolean bounds=true, rebounds=true;
+    boolean bounds=true, rebounds=true, highlight=true;
 
     MainActivity parent;
     private final GestureDetectorCompat gdc;
@@ -79,6 +79,8 @@ public class DrawView3 extends View {
 
             bounds = preferences.getBoolean("pref_bounds", true);
             rebounds = preferences.getBoolean("pref_rebounds", true);
+            highlight = preferences.getBoolean("pref_highlight", true);
+
 
             beds = Integer.parseInt(preferences.getString("pref_beds", "9"));
             maxCoins = Integer.parseInt(preferences.getString("pref_maxCoins", "5"));
@@ -192,6 +194,7 @@ public class DrawView3 extends View {
               //  canvas.drawText("" + score[1][beds - f], screenW - bedH / 2, f * bedH + 2.6f * bedH, linepaint);
             }
         }
+        //draw the 2 sidebars
         canvas.drawLine(bedH, 0, bedH, screenH, linepaint);
         canvas.drawLine(screenW-bedH, 0, screenW-bedH, screenH, linepaint);
 
@@ -215,8 +218,9 @@ public class DrawView3 extends View {
             //TODO set pitch based on size of the objects.
             float volume = Math.min((float) coll.impactV / 100, 1); //set the volume based on impact speed
             if (coll.objb == null) {  //if a wall collision
-                //TODO if a wall collision, may void the coin
+                // if a wall collision, play sound and may void the coin
                 parent.player.play(parent.clunkSound, volume, volume, 2, 0, 1);
+                if (bounds) coll.obja.state=-1; // if boundary rules apply, set to void
             } else {
                 parent.player.play(parent.clinkSound, volume, volume, 2, 0, 1);
             }
@@ -230,17 +234,26 @@ public class DrawView3 extends View {
         Iterator<MoveObj> i = objs.iterator();
         while (i.hasNext()) {
             MoveObj obj = i.next(); // must be called before you can call i.remove()
-            obj.draw(canvas);
+
             matrix.reset();
             matrix.postTranslate(-coinR, -coinR);
             matrix.postRotate(obj.angle);
             matrix.postTranslate((float) obj.x, (float) obj.y);
-
             canvas.drawBitmap(bmp, matrix, bmppaint);
 
-            //if the coin is within a bed, highlight it. TODO - add a temporary score to the player
-            if (getBed((int)obj.y)>0)
-                canvas.drawCircle((float)obj.x, (float)obj.y, coinR, outlinepaint);
+            //if outside the sidebars and boundary rules are on, then void the coin if already in playzone
+            if (bounds && obj.state==0 && (obj.x-coinR<bedH || obj.x+coinR>screenW-bedH)) obj.state=-1;
+
+
+            if (highlight) {
+                if (obj.state < 0) obj.draw(canvas); //TODO - move bitmap and matrix into moveObj OUTLINE IF VOIDED
+                else
+                    //if the coin is within a bed, highlight it. TODO - add a temporary score to the player, or only when motion stopped
+                    if (getBed((int) obj.y) > 0)
+                        canvas.drawCircle((float) obj.x, (float) obj.y, coinR, outlinepaint);
+            }
+
+
             if (obj.xSpeed != 0 || obj.ySpeed != 0) {
                 motion = true;
                 // if there is a streamID then adjust volume else start movement sound
@@ -268,32 +281,32 @@ public class DrawView3 extends View {
         if (inPlay != null && inPlay.state != 0 && inPlay.y < startZone) inPlay.state = 0;
 
         //if there is no ball, or a ball in play and all motion stops, play new ball.
-        if (inPlay == null || !motion &&  inPlay.state == 0) {
+        if (inPlay == null || !motion && inPlay.state != 1) {
                 coinCount++;
                 // all coins played, so do scoring here.
                 if (coinCount>=maxCoins) {
                     i = objs.iterator();
                     while (i.hasNext()) {
                         MoveObj obj = i.next(); // must be called before you can call i.remove()
-                        //if the coin is within a bed, highlight it. TODO - add a temporary score to the player
+                        //if the coin is within a bed, score it
                         int bed = getBed((int)obj.y);
-                        if (bed>0) {
+                        if (bed>0 && obj.state>=0) { //don't include coin if voided. (ie. state is -1
                             score[playerNum][0] += bed; //add the score onto player total // used in portsmouth rules
                             //if already three, increment opponent up to three, else increment player up to three
                             if (!addPoint(playerNum, bed, true)) addPoint(1-playerNum,bed,false);
-                            if (score[playerNum][beds+1]>=beds) winner = playerNum + 1;
+                            if (score[playerNum][beds+1]>=beds) winner = playerNum;
                             //THIS IS A WIN !!!!! reset all
                             // TODO would be good to have a "scoring" state where the coins and scores are animated
 
                         }
                     }
                     coinCount=0;
-                   objs.clear();
-                    if (winner>0){
+                    objs.clear();
+                    if (winner>=0){
                         Toast.makeText(getContext(), "Won by "+pName[winner], Toast.LENGTH_LONG).show();
-                        for (int f = 0; f <= score.length; f++)
-                            score[0][f] = score[1][f] = 0; /* set scores to zero */
-                            playerNum = 0;
+                        for (int f = 0; f <= score.length; f++) score[0][f] = score[1][f] = 0; /* set scores to zero */
+                        playerNum = 0;
+                        winner = -1;
                     } else playerNum=1-playerNum;
 
                     // TODO - if progressive (Oxford) then return some coins
@@ -302,6 +315,7 @@ public class DrawView3 extends View {
                 // add a new coin - this could be first coin
                 // TODO in combat mode we alternate playerNum
                 inPlay = new MoveObj(11 + playerNum, coinR, screenW / 2, screenH - bedH, 5, 0);
+                inPlay.wallBounce=rebounds; //enable or disable wall bounce TODO - move into constructor
                 objs.add(inPlay);
                     parent.player.play(parent.placeSound,1,1,1,0,1);
         }

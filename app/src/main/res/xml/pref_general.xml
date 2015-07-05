@@ -7,14 +7,14 @@
         <EditTextPreference
                 android:key="pref_player1"
                 android:title="Player 1"
-                android:summary="Define the player 1 name to be shown"
+                android:summary="%s"
                 android:dialogTitle="Player 1 name"
                 android:dialogMessage="Provide a name"
-                android:defaultValue="PLayer 1" />
+                android:defaultValue="Player 1" />
         <EditTextPreference
                 android:key="pref_player2"
-                android:title="Player 2"
-                android:summary="Define the player 2 name to be shown"
+                android:title="%s"
+                android:summary="Change Player 2 name"
                 android:dialogTitle="Player 2 name"
                 android:dialogMessage="Provide a name"
                 android:defaultValue="Player 2" />
@@ -25,17 +25,30 @@
 
         <SwitchPreference
                 android:key="pref_rebounds"
-                android:summaryOff="Can bounce off sides"
-                android:summaryOn="No bouncing off sides"
+                android:summaryOn="Can bounce off walls"
+                android:summaryOff="No bouncing off walls"
                 android:switchTextOff="OFF"
                 android:switchTextOn="ON"
                 android:title="Rebounds"
                 android:defaultValue="true"/>
 
-        <CheckBoxPreference
+        <SwitchPreference
                 android:key="pref_bounds"
                 android:title="Boundary Rules"
                 android:summary="Allow coins to cross boundaries"
+                android:summaryOff="Boundary rules disabled"
+                android:summaryOn="Void if boundary crossed"
+                android:switchTextOff="OFF"
+                android:switchTextOn="ON"
+                android:defaultValue="true" />
+
+        <SwitchPreference
+                android:key="pref_highlight"
+                android:title="Coin Highlighting"
+                android:summaryOff="No highlighting"
+                android:summaryOn="Highlight scoring and void coins"
+                android:switchTextOff="OFF"
+                android:switchTextOn="ON"
                 android:defaultValue="true" />
 
         <CheckBoxPreference
@@ -48,7 +61,7 @@
         <CheckBoxPreference
                 android:key="pref_pointscore"
                 android:title="Shanghai (Scoring)"
-                android:summary="Scoring vesrion - no limt to beds"
+                android:summary="Scoring version - no limit to beds"
                 android:enabled="false"
                 android:defaultValue="false" />
 

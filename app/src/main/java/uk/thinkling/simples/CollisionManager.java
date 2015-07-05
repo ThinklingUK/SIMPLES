@@ -35,7 +35,7 @@ public class CollisionManager {
         collisions.clear();
 
         //adjust speeds for friction and gravity
-        for (MoveObj obj : objs) obj.applyFrictionGravity(friction, gravity, 0.1);
+        for (MoveObj obj : objs) obj.applyFrictionGravity(friction, gravity, 0.1, width, height);
 
         //for this timeslice, find first collision, forward wind to that point, adjust velocities and repeat until timeslice done.
         while (dt >0) {
@@ -91,6 +91,7 @@ public class CollisionManager {
 
         //detect earliest wall collision, ie. biggest dt (from y or X strike)
         double dt=9999;
+        if (!obj.wallBounce) return dt; //if the obj has wall bounce disabled, never return a collision time.
         if (obj.x - obj.radius + obj.xSpeed < 0)
             dt = Math.min(dt, (obj.x - obj.radius) / -obj.xSpeed);
         else if (obj.x + obj.radius + obj.xSpeed > width)
