@@ -58,7 +58,7 @@ public class MoveObj implements Serializable {
             case 12: //p2 ball
                 paint.setColor(Color.parseColor("#ff0000"));
                 paint.setStyle(Paint.Style.STROKE);
-                paint.setStrokeWidth(2f);
+                paint.setStrokeWidth(3);
                 break;
 
             case 100: //hero ball
@@ -95,6 +95,7 @@ public class MoveObj implements Serializable {
     private void writeObject(ObjectOutputStream out)throws IOException {
         out.defaultWriteObject();
         out.writeObject(paint.getColor());
+        //TODO should also include stroke etc.
     }
 
     // this is used when de-serializing - can recreate Paint object from Colour
@@ -133,14 +134,14 @@ public class MoveObj implements Serializable {
 
 /*          case 11:
             case 12:
-                //special case for shove hapenny - drawign is done in DrawView with bitmaps should hold bitmap ref within obj
+                //special case for shove hapenny - drawing is done in DrawView with bitmaps should hold bitmap ref within obj
                 break;
                 */
 
             default:
                 canvas.drawCircle((float) x, (float) y, radius, paint);
-                double radians = Math.toRadians(angle);
-                canvas.drawLine((float)x, (float)y, (float)(x + radius* Math.cos(radians)), (float)(y + radius* Math.sin(radians)), paint);
+                //double radians = Math.toRadians(angle);
+                //canvas.drawLine((float)x, (float)y, (float)(x + radius* Math.cos(radians)), (float)(y + radius* Math.sin(radians)), paint);
         }
     }
 

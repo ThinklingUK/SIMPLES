@@ -30,6 +30,7 @@ public class DrawView3 extends View {
     CollisionManager collider;
 
     int screenW, screenH, bedH, coinR, startZone;
+    int shadoff = 4; //shadow offset TODO - factor of coinR
     final double gravity = 0, friction = 0.07;
     final float coinRatio = 0.33f; // bed to radius friction (0.33 is 2 thirds,
     final float bedSpace=0.8f; // NB: includes end space and free bed before first line.
@@ -38,13 +39,14 @@ public class DrawView3 extends View {
     int playerNum = 0;
     int[][] score = new int[2][beds+2]; // bed zero is for point score and final bed is for tracking completed
     String[] pName = new String[2];
-    boolean bounds=true, rebounds=true, highlight=true;
+    boolean sounds=true, bounds=true, rebounds=true, highlight=true;
 
     MainActivity parent;
     private final GestureDetectorCompat gdc;
 
     static Paint linepaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     static Paint outlinepaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    static Paint shadowpaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     Paint bmppaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     static Bitmap rawbmp, bmp; // bitmap for the coin
@@ -71,43 +73,8 @@ public class DrawView3 extends View {
         screenW = w;
         screenH = h;
 
-        try {
-            //Load lists from file or set defaults TODO set defaults as consts
-            SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getContext());
-            pName[0] = preferences.getString("pref_player1", "Player 1");
-            pName[1] = preferences.getString("pref_player2", "Player 2");
-
-            bounds = preferences.getBoolean("pref_bounds", true);
-            rebounds = preferences.getBoolean("pref_rebounds", true);
-            highlight = preferences.getBoolean("pref_highlight", true);
-
-
-            beds = Integer.parseInt(preferences.getString("pref_beds", "9"));
-            maxCoins = Integer.parseInt(preferences.getString("pref_maxCoins", "5"));
-            bedScore = Integer.parseInt(preferences.getString("pref_bedscore", "3"));
-
-        } catch (Exception e){
-            Log.d("LOADING PREFS",  e.getMessage());
-        }
-
-
-        bedH = Math.round(h*bedSpace/(beds+3)); //2 extra beds for end and free space after flickzone
-        coinR=Math.round(bedH*coinRatio);
-        startZone=(beds+2)*bedH+coinR;
-        collider = new CollisionManager(w, h, friction, gravity);
-
-        try {
-            restoreData();
-         } catch (Exception ex){
-            //could be FileNotFoundException, IOException, ClassNotFoundException
-            Log.d("deserialise",ex.toString());
-        }
-
-        //TODO - if beds changed, then stored object radius may be inaccurate
-        //TODO if #beds changed (ie. in prefs) and mismatch with saved data, reset score data
-        if (score.length!=beds+2) score = new int[2][beds+2];
-
-        float strokeSize = (w/180);
+        float strokeSize = (w/180);  // NB this is driven by width so set in onSizeChanged
+        shadowpaint.setARGB(64,0,0,0);
         linepaint.setColor(Color.parseColor("#CD7F32"));
         linepaint.setStyle(Paint.Style.STROKE);
         linepaint.setStrokeWidth(strokeSize); //TODO set based on screensize
@@ -116,18 +83,36 @@ public class DrawView3 extends View {
         linepaint.setStyle(Paint.Style.STROKE);       // set to STOKE
         //linepaint.setStrokeJoin(Paint.Join.ROUND);    // set the join to round you want
         linepaint.setStrokeCap(Paint.Cap.ROUND);      // set the paint cap to round too
-       // linepaint.setPathEffect(new CornerPathEffect(10) );   // set the path effect when they join.
+        // linepaint.setPathEffect(new CornerPathEffect(10) );   // set the path effect when they join.
         linepaint.setAntiAlias(true);
         outlinepaint.set(linepaint);
         outlinepaint.setColor(Color.parseColor("#FFFFFF"));
+
+        try {
+            loadPrefs();
+        } catch (Exception e){
+            Log.d("LOADING PREFS",  e.getMessage());
+        }
+
+
+        collider = new CollisionManager(w, h, friction, gravity);
+
+        try {
+            restoreData();
+         } catch (Exception ex){ //could be FileNotFoundException, IOException, ClassNotFoundException
+            Log.d("deserialise",ex.toString());
+        }
+
+        //TODO - if beds changed, then stored object radius may be inaccurate
+        //TODO if #beds changed (ie. in prefs) and mismatch with saved data, reset score data
+        //Also if bedScore changes then scoring might fail - best to restart in these cases - or all cases?
+        if (score.length!=beds+2) score = new int[2][beds+2];
 
 
         parent.TimeLeftText.setText("");
         parent.ScoreText.setText("");
 
-        rawbmp = BitmapFactory.decodeResource(getResources(), R.drawable.coin67);
-        bmp = Bitmap.createScaledBitmap(rawbmp, coinR * 2, coinR * 2, true);
-        bmppaint.setFilterBitmap(true);
+
     }
 
     /* BIT FOR TOUCHING! */
@@ -219,10 +204,10 @@ public class DrawView3 extends View {
             float volume = Math.min((float) coll.impactV / 100, 1); //set the volume based on impact speed
             if (coll.objb == null) {  //if a wall collision
                 // if a wall collision, play sound and may void the coin
-                parent.player.play(parent.clunkSound, volume, volume, 2, 0, 1);
+                if (sounds) parent.player.play(parent.clunkSound, volume, volume, 2, 0, 1);
                 if (bounds) coll.obja.state=-1; // if boundary rules apply, set to void
             } else {
-                parent.player.play(parent.clinkSound, volume, volume, 2, 0, 1);
+                if (sounds) parent.player.play(parent.clinkSound, volume, volume, 2, 0, 1);
             }
         }
 
@@ -234,7 +219,7 @@ public class DrawView3 extends View {
         Iterator<MoveObj> i = objs.iterator();
         while (i.hasNext()) {
             MoveObj obj = i.next(); // must be called before you can call i.remove()
-
+            canvas.drawCircle((float) obj.x+shadoff, (float) obj.y+shadoff, coinR, shadowpaint);
             matrix.reset();
             matrix.postTranslate(-coinR, -coinR);
             matrix.postRotate(obj.angle);
@@ -263,7 +248,7 @@ public class DrawView3 extends View {
                     parent.player.setVolume(obj.movingStreamID,volume,volume);
                     //adjust volume
                 } else {
-                    obj.movingStreamID = parent.player.play(parent.slideSound, volume, volume, 1, -1, 1);
+                    if (sounds) obj.movingStreamID = parent.player.play(parent.slideSound, volume, volume, 1, -1, 1);
                 }
 
             }
@@ -278,7 +263,7 @@ public class DrawView3 extends View {
 
         }
         // if ball in play exits the start zone, then it cannot be touched
-        if (inPlay != null && inPlay.state != 0 && inPlay.y < startZone) inPlay.state = 0;
+        if (inPlay != null && inPlay.state == 1 && inPlay.y < startZone) inPlay.state = 0;
 
         //if there is no ball, or a ball in play and all motion stops, play new ball.
         if (inPlay == null || !motion && inPlay.state != 1) {
@@ -316,8 +301,8 @@ public class DrawView3 extends View {
                 // TODO in combat mode we alternate playerNum
                 inPlay = new MoveObj(11 + playerNum, coinR, screenW / 2, screenH - bedH, 5, 0);
                 inPlay.wallBounce=rebounds; //enable or disable wall bounce TODO - move into constructor
-                objs.add(inPlay);
-                    parent.player.play(parent.placeSound,1,1,1,0,1);
+            objs.add(inPlay);
+                if (sounds) parent.player.play(parent.placeSound,1,1,1,0,1);
         }
 
         // TODO display potential scores
@@ -376,7 +361,6 @@ public class DrawView3 extends View {
         Log.d("serialize onPause",objs.toString());
     }
 
-    // TODO - pull in the cache here - rather than the onStart()
     public void restoreData() throws IOException,ClassNotFoundException {
         File file = new File(getContext().getCacheDir(), "moveObjs");
         ObjectInputStream is = new ObjectInputStream(new FileInputStream(file));
@@ -390,6 +374,37 @@ public class DrawView3 extends View {
         is = new ObjectInputStream(new FileInputStream(file));
         score= (int[][]) is.readObject();
         Log.d("deserialise", objs.toString());
+    }
+
+    // TODO - pull in the cache here - rather than the onStart()
+    public void loadPrefs() throws ClassCastException  {
+        //Load lists from file or set defaults TODO set defaults as consts
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getContext());
+        pName[0] = preferences.getString("pref_player1", "Player 1");
+        pName[1] = preferences.getString("pref_player2", "Player 2");
+
+        sounds = preferences.getBoolean("pref_sounds", true);
+        bounds = preferences.getBoolean("pref_bounds", true);
+        rebounds = preferences.getBoolean("pref_rebounds", true);
+        highlight = preferences.getBoolean("pref_highlight", true);
+
+
+        maxCoins = Integer.parseInt(preferences.getString("pref_maxCoins", "5"));
+        bedScore = Integer.parseInt(preferences.getString("pref_bedscore", "3"));
+        beds = Integer.parseInt(preferences.getString("pref_beds", "9"));
+
+        //Number of beds then affects bed size, coin size etc.
+
+        bedH = Math.round(screenH * bedSpace / (beds + 3)); //2 extra beds for end and free space after flickzone
+        coinR=Math.round(bedH * coinRatio);
+        startZone=(beds+2)*bedH+coinR;
+
+        rawbmp = BitmapFactory.decodeResource(getResources(), R.drawable.coin67);
+        bmp = Bitmap.createScaledBitmap(rawbmp, coinR * 2, coinR * 2, true);
+        bmppaint.setFilterBitmap(true);
+
+        //TODO if #beds changed (ie. in prefs) and mismatch with saved data, reset score data
+
     }
 }
 

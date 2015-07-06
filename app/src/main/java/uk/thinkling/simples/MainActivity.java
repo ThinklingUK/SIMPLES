@@ -104,6 +104,17 @@ public class MainActivity extends ActionBarActivity {
     @Override
     protected void onResume() {
         super.onResume();
+
+        if (myDrawView instanceof DrawView3) {
+            // reload prefs
+            try {
+                ((DrawView3) myDrawView).loadPrefs();
+                Toast.makeText(getBaseContext(), "onResume - OK", Toast.LENGTH_SHORT).show();
+            } catch (Exception ex) {
+                Toast.makeText(getBaseContext(), "onResume - Fail", Toast.LENGTH_SHORT).show();
+            }
+        }
+
     }
 
 
