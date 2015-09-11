@@ -11,6 +11,9 @@ import android.view.View;
 import java.util.ArrayList;
 import java.util.List;
 
+import uk.thinkling.physics.CollisionManager;
+import uk.thinkling.physics.MoveObj;
+
 /**
  * SIMPLES
  * Created by Ellison on 11/04/2015.

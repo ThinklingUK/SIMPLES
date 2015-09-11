@@ -16,6 +16,10 @@ import android.widget.Toast;
 import java.io.*;
 import java.util.*;
 
+import uk.thinkling.physics.CollisionManager;
+import uk.thinkling.physics.MoveObj;
+
+
 /**
  * SIMPLES
  * Created by Ellison on 11/04/2015.

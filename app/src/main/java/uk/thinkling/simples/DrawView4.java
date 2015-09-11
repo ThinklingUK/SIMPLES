@@ -10,6 +10,9 @@ import android.view.View;
 
 import java.util.*;
 
+import uk.thinkling.physics.CollisionManager;
+import uk.thinkling.physics.MoveObj;
+
 /**
  * SIMPLES
  * Created by Ellison on 11/04/2015.
